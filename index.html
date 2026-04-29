@@ -10,13 +10,17 @@
       text-align: center;
     }
 
+    .container {
+      max-width: 400px;
+      margin: auto;
+      margin-top: 30px;
+    }
+
     .box {
       background: #1e293b;
-      padding: 20px;
+      padding: 15px;
       border-radius: 10px;
-      width: 300px;
-      margin: auto;
-      margin-top: 100px;
+      margin-top: 15px;
     }
 
     input, button {
@@ -28,45 +32,122 @@
     }
 
     button {
-      background: #22c55e;
-      color: white;
+      cursor: pointer;
+    }
+
+    .entrada { background: #22c55e; color: white; }
+    .saida { background: #ef4444; color: white; }
+
+    .item {
+      text-align: left;
+      padding: 8px;
+      border-bottom: 1px solid #334155;
     }
   </style>
 </head>
 <body>
 
-<div class="box">
+<div class="container">
+
   <h2>FluxoZap 💰</h2>
 
-  <h3>Saldo: R$ <span id="saldo">0</span></h3>
+  <div class="box">
+    <h3>Saldo: R$ <span id="saldo">0.00</span></h3>
+  </div>
 
-  <input id="msg" placeholder="Ex: recebi 2000 salário">
-  <button onclick="processar()">Enviar</button>
+  <div class="box">
+    <input id="desc" placeholder="Descrição (ex: mercado)">
+    <input id="valor" type="number" step="0.01" placeholder="Valor (ex: 10.50)">
+    
+    <button class="entrada" onclick="adicionar('entrada')">Recebi</button>
+    <button class="saida" onclick="adicionar('saida')">Gastei</button>
+  </div>
+
+  <div class="box">
+    <h4>Filtrar por data</h4>
+    <input type="date" id="inicio">
+    <input type="date" id="fim">
+    <button onclick="filtrar()">Filtrar</button>
+  </div>
+
+  <div class="box">
+    <h4>Movimentações</h4>
+    <div id="lista"></div>
+  </div>
+
 </div>
 
 <script>
-let saldo = 0;
-let recebido = 0;
+let dados = JSON.parse(localStorage.getItem("dados")) || [];
 
-function processar() {
-  let texto = document.getElementById("msg").value.toLowerCase();
-  let valor = parseFloat(texto.replace(/[^\d]/g, ""));
-
-  if (!valor) return;
-
-  if (texto.includes("recebi")) {
-    saldo += valor;
-    recebido += valor;
-  } else if (texto.includes("gastei")) {
-    saldo -= valor;
-  }
-
-  document.getElementById("saldo").innerText = saldo;
-
-  if (saldo <= recebido * 0.25) {
-    alert("⚠️ Você já gastou 75%!");
-  }
+function salvar() {
+  localStorage.setItem("dados", JSON.stringify(dados));
 }
+
+function atualizar() {
+  let saldo = 0;
+  let lista = document.getElementById("lista");
+  lista.innerHTML = "";
+
+  dados.forEach(item => {
+    if (item.tipo === "entrada") saldo += item.valor;
+    else saldo -= item.valor;
+
+    lista.innerHTML += `
+      <div class="item">
+        ${item.data} - ${item.desc} - R$ ${item.valor.toFixed(2)}
+      </div>
+    `;
+  });
+
+  document.getElementById("saldo").innerText = saldo.toFixed(2);
+}
+
+function adicionar(tipo) {
+  let desc = document.getElementById("desc").value;
+  let valor = parseFloat(document.getElementById("valor").value);
+
+  if (!valor) return alert("Digite um valor");
+
+  let hoje = new Date().toISOString().split("T")[0];
+
+  dados.push({
+    tipo,
+    desc,
+    valor,
+    data: hoje
+  });
+
+  salvar();
+  atualizar();
+}
+
+function filtrar() {
+  let inicio = document.getElementById("inicio").value;
+  let fim = document.getElementById("fim").value;
+
+  let lista = document.getElementById("lista");
+  lista.innerHTML = "";
+
+  let saldo = 0;
+
+  dados.forEach(item => {
+    if (item.data >= inicio && item.data <= fim) {
+      if (item.tipo === "entrada") saldo += item.valor;
+      else saldo -= item.valor;
+
+      lista.innerHTML += `
+        <div class="item">
+          ${item.data} - ${item.desc} - R$ ${item.valor.toFixed(2)}
+        </div>
+      `;
+    }
+  });
+
+  document.getElementById("saldo").innerText = saldo.toFixed(2);
+}
+
+atualizar();
 </script>
 
 </body>
