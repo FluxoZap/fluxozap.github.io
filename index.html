@@ -2,11 +2,72 @@
 <html>
 <head>
   <title>FluxoZap</title>
+  <style>
+    body {
+      font-family: Arial;
+      background: #0f172a;
+      color: white;
+      text-align: center;
+    }
+
+    .box {
+      background: #1e293b;
+      padding: 20px;
+      border-radius: 10px;
+      width: 300px;
+      margin: auto;
+      margin-top: 100px;
+    }
+
+    input, button {
+      width: 90%;
+      padding: 10px;
+      margin-top: 10px;
+      border-radius: 5px;
+      border: none;
+    }
+
+    button {
+      background: #22c55e;
+      color: white;
+    }
+  </style>
 </head>
 <body>
 
-<h1>FluxoZap 💰</h1>
-<p>Seu sistema financeiro está online!</p>
+<div class="box">
+  <h2>FluxoZap 💰</h2>
+
+  <h3>Saldo: R$ <span id="saldo">0</span></h3>
+
+  <input id="msg" placeholder="Ex: recebi 2000 salário">
+  <button onclick="processar()">Enviar</button>
+</div>
+
+<script>
+let saldo = 0;
+let recebido = 0;
+
+function processar() {
+  let texto = document.getElementById("msg").value.toLowerCase();
+  let valor = parseFloat(texto.replace(/[^\d]/g, ""));
+
+  if (!valor) return;
+
+  if (texto.includes("recebi")) {
+    saldo += valor;
+    recebido += valor;
+  } else if (texto.includes("gastei")) {
+    saldo -= valor;
+  }
+
+  document.getElementById("saldo").innerText = saldo;
+
+  if (saldo <= recebido * 0.25) {
+    alert("⚠️ Você já gastou 75%!");
+  }
+}
+</script>
 
 </body>
 </html>
