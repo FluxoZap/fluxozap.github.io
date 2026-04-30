@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Criar Conta</title>
+
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Poppins', sans-serif;
+      background: #0f0f0f;
+      color: white;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+
+    .box {
+      width: 300px;
+    }
+
+    input {
+      width: 100%;
+      padding: 12px;
+      margin-bottom: 8px;
+      border-radius: 10px;
+      border: none;
+      background: #1c1c1c;
+      color: white;
+    }
+
+    button {
+      width: 100%;
+      padding: 12px;
+      border-radius: 10px;
+      border: none;
+      background: #00c853;
+      font-weight: bold;
+      cursor: pointer;
+    }
+  </style>
+</head>
+
+<body>
+
+<div class="box">
+  <h2>Criar conta 💸</h2>
+
+  <input id="nome" placeholder="Nome completo">
+  <input id="email" placeholder="Email">
+  <input id="senha" type="password" placeholder="Senha">
+  <input id="whatsapp" placeholder="WhatsApp">
+
+  <button onclick="cadastrar()">Criar conta</button>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getAuth, createUserWithEmailAndPassword } 
+from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { getFirestore, setDoc, doc } 
+from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyAh0Qi4lm-ZXQLe4YAca8wYbp5kcU6lY3I",
+  authDomain: "fluxozap-10ead.firebaseapp.com",
+  projectId: "fluxozap-10ead",
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+window.cadastrar = async function() {
+  let user = await createUserWithEmailAndPassword(auth, email.value, senha.value);
+
+  await setDoc(doc(db, "usuarios", user.user.uid), {
+    nome: nome.value,
+    whatsapp: whatsapp.value
+  });
+
+  alert("Conta criada!");
+  window.location = "index.html";
+}
+</script>
+
+</body>
+</html>
