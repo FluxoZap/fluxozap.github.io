@@ -1,9 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>FluxoZap</title>
+</head>
+<body>
+
+<h2>FluxoZap 💰</h2>
+<h3>Saldo: R$ <span id="saldo">0.00</span></h3>
+
+<input id="desc" placeholder="Descrição">
+<input id="valor" type="number" step="0.01" placeholder="Valor">
+
+<br><br>
+
+<button onclick="entrada()">Recebi</button>
+<button onclick="saida()">Gastei</button>
+
+<div id="lista"></div>
+
 <script type="module">
-import { db, auth } from "./firebase.js";
-import { collection, addDoc, getDocs, query, where } 
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getFirestore, collection, addDoc, getDocs, query, where } 
 from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { onAuthStateChanged } 
+import { getAuth, onAuthStateChanged } 
 from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+
+// SUA CONFIG
+const firebaseConfig = {
+  apiKey: "AIzaSyAh0Qi4lm-ZXQLe4YAca8wYbp5kcU6lY3I",
+  authDomain: "fluxozap-10ead.firebaseapp.com",
+  projectId: "fluxozap-10ead",
+  storageBucket: "fluxozap-10ead.firebasestorage.app",
+  messagingSenderId: "743375450552",
+  appId: "1:743375450552:web:48b85313fbc7fc30b29f4d"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const auth = getAuth(app);
 
 let saldo = 0;
 let userId = null;
@@ -63,11 +97,12 @@ async function carregar() {
     if (d.tipo === "entrada") saldo += d.valor;
     else saldo -= d.valor;
 
-    lista.innerHTML += `
-      <p>${d.tipo} - ${d.desc} - R$ ${d.valor.toFixed(2)}</p>
-    `;
+    lista.innerHTML += `<p>${d.tipo} - ${d.desc} - R$ ${d.valor.toFixed(2)}</p>`;
   });
 
   document.getElementById("saldo").innerText = saldo.toFixed(2);
 }
 </script>
+
+</body>
+</html>
