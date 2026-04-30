@@ -1,61 +1,21 @@
-<!DOCTYPE html>
-<html>
-<head>
-  <title>FluxoZap</title>
-  <style>
-    body {
-      font-family: Arial;
-      background: #0f172a;
-      color: white;
-      text-align: center;
-    }
-
-    .box {
-      background: #1e293b;
-      padding: 15px;
-      margin: 10px;
-      border-radius: 10px;
-    }
-
-    input, button {
-      padding: 10px;
-      margin: 5px;
-      border-radius: 5px;
-      border: none;
-    }
-
-    .entrada { background: green; color: white; }
-    .saida { background: red; color: white; }
-  </style>
-</head>
-<body>
-
-<h2>FluxoZap 💰</h2>
-
-<div class="box">
-  <h3>Saldo: R$ <span id="saldo">0.00</span></h3>
-</div>
-
-<div class="box">
-  <input id="desc" placeholder="Descrição">
-  <input id="valor" type="number" step="0.01" placeholder="Valor">
-
-  <br>
-  <button class="entrada" onclick="entrada()">Recebi</button>
-  <button class="saida" onclick="saida()">Gastei</button>
-</div>
-
-<div class="box">
-  <h4>Movimentações</h4>
-  <div id="lista"></div>
-</div>
-
 <script type="module">
 import { db, auth } from "./firebase.js";
-import { collection, addDoc, getDocs } 
+import { collection, addDoc, getDocs, query, where } 
 from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { onAuthStateChanged } 
+from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
 let saldo = 0;
+let userId = null;
+
+onAuthStateChanged(auth, (user) => {
+  if (user) {
+    userId = user.uid;
+    carregar();
+  } else {
+    window.location = "index.html";
+  }
+});
 
 window.entrada = async function() {
   let desc = document.getElementById("desc").value;
@@ -66,7 +26,8 @@ window.entrada = async function() {
   await addDoc(collection(db, "movimentos"), {
     tipo: "entrada",
     desc,
-    valor
+    valor,
+    userId
   });
 
   carregar();
@@ -81,7 +42,8 @@ window.saida = async function() {
   await addDoc(collection(db, "movimentos"), {
     tipo: "saida",
     desc,
-    valor
+    valor,
+    userId
   });
 
   carregar();
@@ -92,7 +54,8 @@ async function carregar() {
   let lista = document.getElementById("lista");
   lista.innerHTML = "";
 
-  const querySnapshot = await getDocs(collection(db, "movimentos"));
+  const q = query(collection(db, "movimentos"), where("userId", "==", userId));
+  const querySnapshot = await getDocs(q);
 
   querySnapshot.forEach(doc => {
     let d = doc.data();
@@ -107,9 +70,4 @@ async function carregar() {
 
   document.getElementById("saldo").innerText = saldo.toFixed(2);
 }
-
-carregar();
 </script>
-
-</body>
-</html>
