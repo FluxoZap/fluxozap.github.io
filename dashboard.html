@@ -6,6 +6,8 @@
 
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
 
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
 <style>
 body {
   margin: 0;
@@ -15,8 +17,6 @@ body {
 }
 
 .app {
-  max-width: 420px;
-  margin: auto;
   padding: 20px;
 }
 
@@ -28,57 +28,30 @@ body {
 }
 
 .logo {
+  font-size: 20px;
   font-weight: 600;
-  font-size: 18px;
 }
 
 .perfil {
   display: flex;
   align-items: center;
   gap: 10px;
-  cursor: pointer;
 }
 
-.foto {
-  width: 38px;
-  height: 38px;
+.perfil img {
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
-  background: #222;
-  display: flex;
-  align-items: center;
-  justify-content: center;
 }
 
-.menu {
-  position: absolute;
-  right: 20px;
-  top: 70px;
-  background: #1a1a1a;
-  border-radius: 10px;
-  display: none;
-  padding: 10px;
-}
-
-.menu div {
-  padding: 10px;
-  cursor: pointer;
-}
-
-.menu div:hover {
-  background: #333;
-}
-
-/* CARD */
+/* SALDO */
 .card {
-  margin-top: 25px;
-  background: linear-gradient(135deg, #6a1b9a, #4a148c);
-  padding: 25px;
-  border-radius: 20px;
+  margin-top: 20px;
 }
 
 .saldo {
-  font-size: 34px;
-  font-weight: 600;
+  font-size: 40px;
+  font-weight: bold;
 }
 
 /* BOTÕES */
@@ -90,15 +63,35 @@ body {
 
 .btn {
   flex: 1;
-  padding: 15px;
+  padding: 18px;
   border-radius: 15px;
   border: none;
-  font-weight: 600;
-  cursor: pointer;
+  font-size: 16px;
+  font-weight: bold;
 }
 
 .recebi { background: #00c853; }
 .gastei { background: #d50000; }
+
+/* MODAL */
+.modal {
+  position: fixed;
+  bottom: 0;
+  width: 100%;
+  background: #111;
+  padding: 20px;
+  display: none;
+}
+
+input {
+  width: 100%;
+  padding: 15px;
+  margin-top: 10px;
+  border-radius: 10px;
+  border: none;
+  background: #222;
+  color: white;
+}
 
 /* EXTRATO */
 .item {
@@ -108,38 +101,9 @@ body {
   margin-top: 10px;
 }
 
-.entrada { color: #00e676; }
-.saida { color: #ff5252; }
-
-/* MODAL */
-.modal {
-  position: fixed;
-  bottom: 0;
-  width: 100%;
-  max-width: 420px;
-  background: #111;
-  border-radius: 20px 20px 0 0;
-  padding: 20px;
-  display: none;
-}
-
-.modal input {
-  width: 100%;
-  padding: 15px;
-  border-radius: 10px;
-  border: none;
-  margin-top: 10px;
-  background: #222;
-  color: white;
-}
-
-.modal button {
-  width: 100%;
-  padding: 15px;
-  margin-top: 10px;
-  border: none;
-  border-radius: 10px;
-  font-weight: bold;
+/* GRAFICO */
+.grafico {
+  margin-top: 30px;
 }
 </style>
 </head>
@@ -150,17 +114,10 @@ body {
 
 <div class="topo">
   <div class="logo">FluxoZap</div>
-
-  <div class="perfil" onclick="toggleMenu()">
-    <div id="nomeUsuario">Conta</div>
-    <div class="foto">👤</div>
+  <div class="perfil">
+    <span id="nomeUsuario"></span>
+    <img id="foto" src="https://i.pravatar.cc/100">
   </div>
-</div>
-
-<div class="menu" id="menu">
-  <div onclick="logout()">Sair</div>
-  <div>Alterar dados</div>
-  <div>Pagamento</div>
 </div>
 
 <div class="card">
@@ -173,12 +130,16 @@ body {
   <button class="btn gastei" onclick="abrirModal('saida')">Gastei</button>
 </div>
 
+<div class="grafico">
+  <canvas id="grafico"></canvas>
+</div>
+
 <div id="lista"></div>
 
 </div>
 
 <div class="modal" id="modal">
-  <h3 id="tituloModal"></h3>
+  <h3 id="titulo"></h3>
   <input type="number" id="valor" placeholder="Digite o valor">
   <button onclick="salvar()">Confirmar</button>
 </div>
@@ -186,7 +147,7 @@ body {
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getFirestore, collection, addDoc, getDocs, query, where } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyAh0Qi4lm-ZXQLe4YAca8wYbp5kcU6lY3I",
@@ -198,31 +159,24 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
 
-let tipoAtual = "";
 let userId = "";
+let tipoAtual = "";
+let chart;
 
-onAuthStateChanged(auth, (user) => {
+onAuthStateChanged(auth, async (user) => {
   if (user) {
     userId = user.uid;
+    document.getElementById("nomeUsuario").innerText = user.email;
     carregar();
   } else {
     window.location.href = "index.html";
   }
 });
 
-window.toggleMenu = function() {
-  let m = document.getElementById("menu");
-  m.style.display = m.style.display === "block" ? "none" : "block";
-}
-
-window.logout = function() {
-  signOut(auth);
-}
-
 window.abrirModal = function(tipo) {
   tipoAtual = tipo;
   document.getElementById("modal").style.display = "block";
-  document.getElementById("tituloModal").innerText = tipo === "entrada" ? "Recebimento" : "Gasto";
+  document.getElementById("titulo").innerText = tipo === "entrada" ? "Recebimento" : "Gasto";
 }
 
 window.salvar = async function() {
@@ -238,12 +192,14 @@ window.salvar = async function() {
 
   document.getElementById("modal").style.display = "none";
   document.getElementById("valor").value = "";
-
   carregar();
 }
 
 async function carregar() {
   let saldo = 0;
+  let entrada = 0;
+  let saida = 0;
+
   let lista = document.getElementById("lista");
   lista.innerHTML = "";
 
@@ -253,20 +209,42 @@ async function carregar() {
   docs.forEach(doc => {
     let d = doc.data();
 
-    if (d.tipo === "entrada") saldo += d.valor;
-    else saldo -= d.valor;
+    if (d.tipo === "entrada") {
+      saldo += d.valor;
+      entrada += d.valor;
+    } else {
+      saldo -= d.valor;
+      saida += d.valor;
+    }
 
     lista.innerHTML += `
       <div class="item">
-        <div>${d.tipo === "entrada" ? "Entrada" : "Saída"} - ${d.data}</div>
-        <div class="${d.tipo === "entrada" ? "entrada" : "saida"}">
+        ${d.tipo === "entrada" ? "Entrada" : "Saída"} - ${d.data}
+        <br>
+        <strong style="color:${d.tipo === "entrada" ? "#00e676" : "#ff5252"}">
           R$ ${d.valor.toFixed(2)}
-        </div>
+        </strong>
       </div>
     `;
   });
 
   document.getElementById("saldo").innerText = saldo.toFixed(2);
+
+  // gráfico
+  const ctx = document.getElementById("grafico");
+
+  if (chart) chart.destroy();
+
+  chart = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: ['Recebido', 'Gasto'],
+      datasets: [{
+        data: [entrada, saida],
+        backgroundColor: ['#00e676', '#ff5252']
+      }]
+    }
+  });
 }
 </script>
 
