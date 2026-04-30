@@ -15,117 +15,73 @@ body{
   color:white;
 }
 
-/* ocupa tela estilo app */
 .app{
-  max-width:480px;
+  max-width:500px;
   margin:auto;
-  padding:20px;
+  padding:15px;
 }
 
-/* topo */
-.topo{
+/* BLOCO */
+.bloco{
+  background:#141414;
+  border-radius:15px;
+  padding:15px;
+  margin-bottom:15px;
+}
+
+/* SALDO */
+.saldo{
+  font-size:36px;
+  font-weight:bold;
+}
+
+/* PERFIL */
+.perfil{
   display:flex;
   justify-content:space-between;
   align-items:center;
 }
 
-.logo{
-  font-size:22px;
-  font-weight:600;
-}
-
-.perfil{
-  display:flex;
-  align-items:center;
-  gap:10px;
-  cursor:pointer;
-}
-
 .perfil img{
   width:40px;
-  height:40px;
   border-radius:50%;
 }
 
-/* menu */
-.menu{
-  position:absolute;
-  right:20px;
-  top:70px;
-  background:#1a1a1a;
-  border-radius:10px;
-  display:none;
-}
-
-.menu div{
-  padding:12px;
-  cursor:pointer;
-}
-
-/* saldo */
-.saldo{
-  font-size:42px;
-  margin-top:20px;
-  font-weight:bold;
-}
-
-/* botoes */
-.acoes{
+/* INPUTS */
+.input-area{
   display:flex;
   gap:10px;
-  margin-top:20px;
+  margin-top:10px;
 }
 
-.btn{
+input{
   flex:1;
-  padding:18px;
-  border-radius:15px;
+  padding:12px;
+  border-radius:10px;
   border:none;
-  font-size:16px;
+  background:#222;
+  color:white;
+}
+
+button{
+  padding:12px;
+  border:none;
+  border-radius:10px;
   font-weight:bold;
 }
 
 .recebi{background:#00c853;}
 .gastei{background:#d50000;}
 
-/* grafico */
-.grafico{
-  margin-top:30px;
-  text-align:center;
+/* GRAFICO */
+canvas{
+  max-height:180px;
 }
 
-/* porcentagem */
-.percentual{
-  margin-top:10px;
-  font-size:18px;
-}
-
-/* extrato */
+/* EXTRATO */
 .item{
-  background:#1a1a1a;
-  padding:12px;
-  border-radius:10px;
-  margin-top:10px;
-}
-
-/* modal */
-.modal{
-  position:fixed;
-  bottom:0;
-  width:100%;
-  background:#111;
-  padding:20px;
-  display:none;
-}
-
-input{
-  width:100%;
-  padding:15px;
-  margin-top:10px;
-  border-radius:10px;
-  border:none;
-  background:#222;
-  color:white;
+  margin-top:8px;
+  font-size:14px;
 }
 </style>
 </head>
@@ -134,49 +90,56 @@ input{
 
 <div class="app">
 
-<div class="topo">
-  <div class="logo">FluxoZap</div>
+<!-- 1 SALDO -->
+<div class="bloco">
+  <div>Saldo Total</div>
+  <div class="saldo">R$ <span id="saldo">0.00</span></div>
+</div>
 
-  <div class="perfil" onclick="toggleMenu()">
-    <span id="nomeUsuario"></span>
-    <img id="foto" src="https://i.pravatar.cc/100">
+<!-- 2 CONTA -->
+<div class="bloco perfil">
+  <div>
+    <div id="nomeUsuario">Usuário</div>
+    <small>Conta</small>
   </div>
+  <img id="foto" src="https://i.pravatar.cc/100">
 </div>
 
-<div class="menu" id="menu">
-  <div onclick="logout()">Sair</div>
-  <div>Editar conta</div>
-  <div>Pagamento</div>
+<!-- 3 RECEBI / GASTEI -->
+<div class="bloco">
+
+  <div>Recebimento</div>
+  <div class="input-area">
+    <input id="entradaValor" type="number" placeholder="Valor recebido">
+    <button class="recebi" onclick="addEntrada()">+</button>
+  </div>
+
+  <div style="margin-top:15px;">Gasto</div>
+  <div class="input-area">
+    <input id="saidaValor" type="number" placeholder="Valor gasto">
+    <button class="gastei" onclick="addSaida()">-</button>
+  </div>
+
 </div>
 
-<div class="saldo">
-  R$ <span id="saldo">0.00</span>
-</div>
+<!-- 4 GRAFICO + EXTRATO -->
+<div class="bloco">
 
-<div class="acoes">
-  <button class="btn recebi" onclick="abrirModal('entrada')">Recebi</button>
-  <button class="btn gastei" onclick="abrirModal('saida')">Gastei</button>
-</div>
-
-<div class="grafico">
   <canvas id="grafico"></canvas>
-  <div class="percentual" id="percentual"></div>
+  <div id="percentual"></div>
+
+  <hr style="margin:15px 0; border-color:#333;">
+
+  <div id="lista"></div>
+
 </div>
 
-<div id="lista"></div>
-
-</div>
-
-<div class="modal" id="modal">
-  <h3 id="titulo"></h3>
-  <input type="number" id="valor" placeholder="Digite o valor">
-  <button onclick="salvar()">Confirmar</button>
 </div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getFirestore, collection, addDoc, getDocs, query, where } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyAh0Qi4lm-ZXQLe4YAca8wYbp5kcU6lY3I",
@@ -189,10 +152,9 @@ const db = getFirestore(app);
 const auth = getAuth(app);
 
 let userId="";
-let tipoAtual="";
 let chart;
 
-onAuthStateChanged(auth, (user)=>{
+onAuthStateChanged(auth,(user)=>{
   if(user){
     userId=user.uid;
     document.getElementById("nomeUsuario").innerText=user.email;
@@ -202,35 +164,33 @@ onAuthStateChanged(auth, (user)=>{
   }
 });
 
-window.toggleMenu=function(){
-  let m=document.getElementById("menu");
-  m.style.display=m.style.display==="block"?"none":"block";
-}
-
-window.logout=function(){
-  signOut(auth);
-}
-
-window.abrirModal=function(tipo){
-  tipoAtual=tipo;
-  document.getElementById("modal").style.display="block";
-  document.getElementById("titulo").innerText=
-    tipo==="entrada"?"Recebimento":"Gasto";
-}
-
-window.salvar=async function(){
-  let valor=parseFloat(document.getElementById("valor").value);
+window.addEntrada = async function(){
+  let valor=parseFloat(document.getElementById("entradaValor").value);
   if(!valor) return;
 
   await addDoc(collection(db,"movimentos"),{
-    tipo:tipoAtual,
+    tipo:"entrada",
     valor,
     data:new Date().toLocaleString(),
     userId
   });
 
-  document.getElementById("modal").style.display="none";
-  document.getElementById("valor").value="";
+  document.getElementById("entradaValor").value="";
+  carregar();
+}
+
+window.addSaida = async function(){
+  let valor=parseFloat(document.getElementById("saidaValor").value);
+  if(!valor) return;
+
+  await addDoc(collection(db,"movimentos"),{
+    tipo:"saida",
+    valor,
+    data:new Date().toLocaleString(),
+    userId
+  });
+
+  document.getElementById("saidaValor").value="";
   carregar();
 }
 
@@ -262,13 +222,10 @@ async function carregar(){
 
   document.getElementById("saldo").innerText=saldo.toFixed(2);
 
-  // porcentagem positiva
   let total=entrada+saida;
   let perc=total?((entrada/total)*100).toFixed(1):0;
-  document.getElementById("percentual").innerText=
-    "Positivo: "+perc+"%";
+  document.getElementById("percentual").innerText="Positivo: "+perc+"%";
 
-  // grafico
   const ctx=document.getElementById("grafico");
   if(chart) chart.destroy();
 
