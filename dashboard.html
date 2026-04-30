@@ -11,28 +11,33 @@
 body{
   margin:0;
   font-family:'Inter',sans-serif;
-  background:#0a0a0a;
+  background:linear-gradient(180deg,#0a0a0a,#111);
   color:white;
 }
 
+/* TELA CHEIA */
 .app{
-  max-width:500px;
-  margin:auto;
-  padding:15px;
+  width:100%;
+  height:100vh;
+  padding:25px;
+  box-sizing:border-box;
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  grid-gap:20px;
 }
 
 /* BLOCO */
 .bloco{
   background:#141414;
-  border-radius:15px;
-  padding:15px;
-  margin-bottom:15px;
+  border-radius:18px;
+  padding:20px;
 }
 
 /* SALDO */
 .saldo{
-  font-size:36px;
+  font-size:40px;
   font-weight:bold;
+  margin-top:10px;
 }
 
 /* PERFIL */
@@ -43,7 +48,7 @@ body{
 }
 
 .perfil img{
-  width:40px;
+  width:45px;
   border-radius:50%;
 }
 
@@ -56,7 +61,7 @@ body{
 
 input{
   flex:1;
-  padding:12px;
+  padding:14px;
   border-radius:10px;
   border:none;
   background:#222;
@@ -64,10 +69,11 @@ input{
 }
 
 button{
-  padding:12px;
+  padding:14px;
   border:none;
   border-radius:10px;
   font-weight:bold;
+  cursor:pointer;
 }
 
 .recebi{background:#00c853;}
@@ -75,13 +81,21 @@ button{
 
 /* GRAFICO */
 canvas{
-  max-height:180px;
+  max-height:200px;
 }
 
 /* EXTRATO */
 .item{
   margin-top:8px;
   font-size:14px;
+}
+
+/* RESPONSIVO */
+@media(max-width:900px){
+  .app{
+    grid-template-columns:1fr;
+    height:auto;
+  }
 }
 </style>
 </head>
@@ -90,24 +104,23 @@ canvas{
 
 <div class="app">
 
-<!-- 1 SALDO -->
+<!-- SALDO -->
 <div class="bloco">
   <div>Saldo Total</div>
   <div class="saldo">R$ <span id="saldo">0.00</span></div>
 </div>
 
-<!-- 2 CONTA -->
+<!-- CONTA -->
 <div class="bloco perfil">
   <div>
     <div id="nomeUsuario">Usuário</div>
     <small>Conta</small>
   </div>
-  <img id="foto" src="https://i.pravatar.cc/100">
+  <img src="https://i.pravatar.cc/100">
 </div>
 
-<!-- 3 RECEBI / GASTEI -->
+<!-- RECEBI / GASTEI -->
 <div class="bloco">
-
   <div>Recebimento</div>
   <div class="input-area">
     <input id="entradaValor" type="number" placeholder="Valor recebido">
@@ -119,19 +132,14 @@ canvas{
     <input id="saidaValor" type="number" placeholder="Valor gasto">
     <button class="gastei" onclick="addSaida()">-</button>
   </div>
-
 </div>
 
-<!-- 4 GRAFICO + EXTRATO -->
+<!-- GRAFICO + EXTRATO -->
 <div class="bloco">
-
   <canvas id="grafico"></canvas>
   <div id="percentual"></div>
-
-  <hr style="margin:15px 0; border-color:#333;">
-
+  <hr style="border-color:#333; margin:15px 0;">
   <div id="lista"></div>
-
 </div>
 
 </div>
@@ -196,7 +204,6 @@ window.addSaida = async function(){
 
 async function carregar(){
   let saldo=0,entrada=0,saida=0;
-
   let lista=document.getElementById("lista");
   lista.innerHTML="";
 
