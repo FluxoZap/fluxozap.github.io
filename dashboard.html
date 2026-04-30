@@ -1,19 +1,23 @@
 <!DOCTYPE html>
-<html>
+<html lang="pt-BR">
 <head>
+  <meta charset="UTF-8">
   <title>FluxoZap 💸</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
 
   <style>
     body {
       margin: 0;
       font-family: 'Inter', sans-serif;
-      background: linear-gradient(180deg, #0d0d0d, #1a1a1a);
+      background: #0f0f0f;
       color: white;
     }
 
     .container {
       padding: 20px;
+      max-width: 500px;
+      margin: auto;
     }
 
     .topo {
@@ -22,90 +26,63 @@
       align-items: center;
     }
 
-    .saudacao {
-      font-size: 14px;
-      color: #aaa;
-    }
-
-    .nome {
-      font-size: 22px;
-      font-weight: 600;
+    .topo h2 {
+      margin: 0;
+      font-size: 20px;
     }
 
     .perfil {
-      width: 45px;
-      height: 45px;
-      background: #222;
+      background: #1f1f1f;
+      width: 40px;
+      height: 40px;
       border-radius: 50%;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 20px;
     }
 
     .card {
-      margin-top: 25px;
-      padding: 25px;
-      border-radius: 25px;
-      background: linear-gradient(135deg, #00c853, #00a844);
-      box-shadow: 0 20px 50px rgba(0,0,0,0.6);
-    }
-
-    .saldo-label {
-      font-size: 14px;
-      opacity: 0.9;
+      margin-top: 20px;
+      background: linear-gradient(135deg, #00c853, #009624);
+      border-radius: 20px;
+      padding: 20px;
     }
 
     .saldo {
-      font-size: 38px;
-      font-weight: 600;
+      font-size: 32px;
+      font-weight: bold;
       margin-top: 5px;
     }
 
     .acoes {
       display: flex;
-      gap: 15px;
+      gap: 10px;
+      margin-top: 20px;
+    }
+
+    .btn {
+      flex: 1;
+      padding: 15px;
+      border-radius: 15px;
+      border: none;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    .recebi { background: #00c853; }
+    .gastei { background: #d50000; }
+
+    .extrato {
       margin-top: 25px;
     }
 
-    .acao {
-      flex: 1;
-      background: #1f1f1f;
-      padding: 18px;
-      border-radius: 18px;
-      text-align: center;
-      cursor: pointer;
-      transition: 0.2s;
-    }
-
-    .acao:hover {
-      background: #2c2c2c;
-      transform: scale(1.03);
-    }
-
-    .acao strong {
-      display: block;
-      margin-top: 5px;
-      font-size: 14px;
-    }
-
-    .extrato {
-      margin-top: 30px;
-    }
-
-    .extrato h3 {
-      font-weight: 500;
-      margin-bottom: 15px;
-    }
-
     .item {
-      background: #1a1a1a;
-      padding: 14px;
-      border-radius: 14px;
-      margin-bottom: 10px;
       display: flex;
       justify-content: space-between;
-      align-items: center;
+      background: #1c1c1c;
+      padding: 12px;
+      border-radius: 10px;
+      margin-top: 10px;
     }
 
     .entrada { color: #00e676; }
@@ -118,21 +95,18 @@
 <div class="container">
 
   <div class="topo">
-    <div>
-      <div class="saudacao">Olá 👋</div>
-      <div class="nome" id="nomeUsuario">Seu nome</div>
-    </div>
+    <h2>FluxoZap 💸</h2>
     <div class="perfil">👤</div>
   </div>
 
   <div class="card">
-    <div class="saldo-label">Saldo disponível</div>
+    <div>Saldo disponível</div>
     <div class="saldo">R$ <span id="saldo">0.00</span></div>
   </div>
 
   <div class="acoes">
-    <div class="acao" onclick="entrada()">➕ <strong>Recebi</strong></div>
-    <div class="acao" onclick="saida()">➖ <strong>Gastei</strong></div>
+    <button class="btn recebi" onclick="entrada()">Recebi</button>
+    <button class="btn gastei" onclick="saida()">Gastei</button>
   </div>
 
   <div class="extrato">
