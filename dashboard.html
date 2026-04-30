@@ -11,11 +11,11 @@
 body{
   margin:0;
   font-family:'Inter',sans-serif;
-  background:#0f1115; /* fundo escuro uniforme */
+  background:#0f1115;
   color:white;
 }
 
-/* LAYOUT */
+/* ===== DESKTOP ===== */
 .container{
   display:flex;
   height:100vh;
@@ -23,7 +23,7 @@ body{
 
 /* MENU LATERAL */
 .sidebar{
-  width:220px;
+  width:240px;
   background:#15171c;
   padding:20px;
 }
@@ -33,24 +33,25 @@ body{
 }
 
 .sidebar div{
-  margin-top:20px;
+  margin-top:15px;
+  color:#aaa;
   cursor:pointer;
-  color:#bbb;
 }
 
-/* CONTEÚDO */
+/* MAIN DESKTOP */
 .main{
   flex:1;
-  padding:25px;
-  overflow:auto;
+  padding:20px;
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:20px;
 }
 
-/* BLOCOS */
+/* BLOCO */
 .bloco{
   background:#1a1d23;
-  padding:20px;
+  padding:18px;
   border-radius:15px;
-  margin-bottom:20px;
 }
 
 /* SALDO */
@@ -59,22 +60,21 @@ body{
   font-weight:bold;
 }
 
-/* INPUT */
+/* INPUTS */
 input{
   padding:12px;
   border-radius:10px;
   border:none;
   background:#2a2d35;
   color:white;
-  margin-right:10px;
 }
 
-/* BOTÕES */
 button{
   padding:12px;
   border:none;
   border-radius:10px;
   font-weight:bold;
+  cursor:pointer;
 }
 
 .recebi{background:#00c853;}
@@ -92,6 +92,44 @@ button{
 /* EXTRATO */
 .item{
   margin-top:10px;
+  font-size:14px;
+}
+
+/* GRAFICO */
+canvas{
+  max-height:200px;
+}
+
+/* ===== MOBILE ===== */
+@media (max-width: 900px){
+
+.container{
+  flex-direction:column;
+}
+
+/* menu vira topo */
+.sidebar{
+  width:100%;
+  display:flex;
+  justify-content:space-around;
+  padding:15px;
+}
+
+/* vira 1 coluna */
+.main{
+  grid-template-columns:1fr;
+}
+
+/* botões maiores estilo app */
+button{
+  width:100%;
+  margin-top:5px;
+}
+
+input{
+  width:100%;
+  margin-top:5px;
+}
 }
 </style>
 </head>
@@ -103,7 +141,6 @@ button{
 <!-- MENU -->
 <div class="sidebar">
   <h2>FluxoZap</h2>
-
   <div>Dashboard</div>
   <div>Extrato</div>
   <div>Conta</div>
@@ -112,34 +149,36 @@ button{
 <!-- CONTEÚDO -->
 <div class="main">
 
+<!-- SALDO -->
 <div class="bloco">
   <div>Saldo Total</div>
   <div class="saldo">R$ <span id="saldo">0.00</span></div>
-  <div id="alerta" class="alerta">⚠️ Você já gastou mais de 75% do mês!</div>
+  <div id="alerta" class="alerta">⚠️ Você já gastou 75% do seu saldo!</div>
 </div>
 
+<!-- CONTA -->
 <div class="bloco">
-  <input type="number" id="entradaValor" placeholder="Recebido">
-  <button class="recebi" onclick="addEntrada()">+</button>
-
-  <br><br>
-
-  <input type="number" id="saidaValor" placeholder="Gasto">
-  <button class="gastei" onclick="addSaida()">-</button>
+  <div id="nomeUsuario">Usuário</div>
+  <small>Conta</small>
 </div>
 
+<!-- MOVIMENTOS -->
 <div class="bloco">
+  <h3>Recebimento</h3>
+  <input id="entradaValor" type="number" placeholder="Valor recebido">
+  <button class="recebi" onclick="addEntrada()">Receber</button>
 
-  <!-- FILTRO -->
-  <input type="date" id="dataInicio">
-  <input type="date" id="dataFim">
-  <button onclick="carregar()">Filtrar</button>
+  <h3 style="margin-top:15px;">Gasto</h3>
+  <input id="saidaValor" type="number" placeholder="Valor gasto">
+  <button class="gastei" onclick="addSaida()">Gastar</button>
+</div>
 
+<!-- GRAFICO + EXTRATO -->
+<div class="bloco">
   <canvas id="grafico"></canvas>
   <div id="percentual"></div>
-
+  <hr style="border-color:#333;">
   <div id="lista"></div>
-
 </div>
 
 </div>
@@ -166,6 +205,7 @@ let chart;
 onAuthStateChanged(auth,(user)=>{
   if(user){
     userId=user.uid;
+    document.getElementById("nomeUsuario").innerText=user.email;
     carregar();
   }else{
     window.location.href="index.html";
@@ -173,12 +213,12 @@ onAuthStateChanged(auth,(user)=>{
 });
 
 window.addEntrada=async function(){
-  let valor=parseFloat(document.getElementById("entradaValor").value);
-  if(!valor) return;
+  let v=parseFloat(document.getElementById("entradaValor").value);
+  if(!v) return;
 
   await addDoc(collection(db,"movimentos"),{
     tipo:"entrada",
-    valor,
+    valor:v,
     data:new Date().toISOString(),
     userId
   });
@@ -187,12 +227,12 @@ window.addEntrada=async function(){
 }
 
 window.addSaida=async function(){
-  let valor=parseFloat(document.getElementById("saidaValor").value);
-  if(!valor) return;
+  let v=parseFloat(document.getElementById("saidaValor").value);
+  if(!v) return;
 
   await addDoc(collection(db,"movimentos"),{
     tipo:"saida",
-    valor,
+    valor:v,
     data:new Date().toISOString(),
     userId
   });
@@ -202,20 +242,15 @@ window.addSaida=async function(){
 
 async function carregar(){
   let saldo=0,entrada=0,saida=0;
+
   let lista=document.getElementById("lista");
   lista.innerHTML="";
-
-  let inicio=document.getElementById("dataInicio").value;
-  let fim=document.getElementById("dataFim").value;
 
   const q=query(collection(db,"movimentos"),where("userId","==",userId));
   const docs=await getDocs(q);
 
   docs.forEach(doc=>{
     let d=doc.data();
-
-    if(inicio && d.data < inicio) return;
-    if(fim && d.data > fim) return;
 
     if(d.tipo==="entrada"){saldo+=d.valor;entrada+=d.valor;}
     else{saldo-=d.valor;saida+=d.valor;}
@@ -225,7 +260,7 @@ async function carregar(){
         ${d.tipo==="entrada"?"Entrada":"Saída"} - ${new Date(d.data).toLocaleString()}
         <br>
         <strong style="color:${d.tipo==="entrada"?"#00e676":"#ff5252"}">
-        R$ ${d.valor.toFixed(2)}
+          R$ ${d.valor.toFixed(2)}
         </strong>
       </div>
     `;
@@ -233,12 +268,10 @@ async function carregar(){
 
   document.getElementById("saldo").innerText=saldo.toFixed(2);
 
-  // ALERTA 75%
-  let percGasto = entrada ? (saida/entrada)*100 : 0;
-  document.getElementById("alerta").style.display =
-    percGasto >= 75 ? "block" : "none";
+  let alerta=document.getElementById("alerta");
+  let percGasto=entrada? (saida/entrada)*100 : 0;
+  alerta.style.display = percGasto>=75 ? "block":"none";
 
-  // porcentagem positiva
   let total=entrada+saida;
   let perc=total?((entrada/total)*100).toFixed(1):0;
   document.getElementById("percentual").innerText="Positivo: "+perc+"%";
