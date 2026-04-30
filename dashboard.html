@@ -1,180 +1,205 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <title>FluxoZap</title>
+<meta charset="UTF-8">
+<title>FluxoZap</title>
 
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
 
-  <style>
-    body {
-      margin: 0;
-      font-family: 'Inter', sans-serif;
-      background: #0b0b0b;
-      color: white;
-    }
+<style>
+body {
+  margin: 0;
+  font-family: 'Inter', sans-serif;
+  background: #0d0d0d;
+  color: white;
+}
 
-    .app {
-      max-width: 420px;
-      margin: auto;
-      padding: 20px;
-    }
+.app {
+  max-width: 420px;
+  margin: auto;
+  padding: 20px;
+}
 
-    .topo {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 25px;
-    }
+/* TOPO */
+.topo {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
 
-    .saudacao {
-      font-size: 14px;
-      color: #aaa;
-    }
+.logo {
+  font-weight: 600;
+  font-size: 18px;
+}
 
-    .nome {
-      font-size: 20px;
-      font-weight: 600;
-    }
+.perfil {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+}
 
-    .perfil {
-      width: 42px;
-      height: 42px;
-      background: #1f1f1f;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 18px;
-    }
+.foto {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: #222;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
 
-    .card {
-      background: linear-gradient(135deg, #7b1fa2, #4a148c);
-      border-radius: 22px;
-      padding: 22px;
-      margin-bottom: 25px;
-      box-shadow: 0 10px 40px rgba(0,0,0,0.5);
-    }
+.menu {
+  position: absolute;
+  right: 20px;
+  top: 70px;
+  background: #1a1a1a;
+  border-radius: 10px;
+  display: none;
+  padding: 10px;
+}
 
-    .saldo-label {
-      font-size: 13px;
-      opacity: 0.8;
-    }
+.menu div {
+  padding: 10px;
+  cursor: pointer;
+}
 
-    .saldo {
-      font-size: 34px;
-      font-weight: 600;
-      margin-top: 5px;
-    }
+.menu div:hover {
+  background: #333;
+}
 
-    .acoes {
-      display: flex;
-      justify-content: space-between;
-      margin-bottom: 30px;
-    }
+/* CARD */
+.card {
+  margin-top: 25px;
+  background: linear-gradient(135deg, #6a1b9a, #4a148c);
+  padding: 25px;
+  border-radius: 20px;
+}
 
-    .acao {
-      flex: 1;
-      margin: 0 5px;
-      background: #181818;
-      border-radius: 18px;
-      padding: 15px;
-      text-align: center;
-      cursor: pointer;
-      transition: 0.2s;
-    }
+.saldo {
+  font-size: 34px;
+  font-weight: 600;
+}
 
-    .acao:hover {
-      background: #242424;
-    }
+/* BOTÕES */
+.acoes {
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
+}
 
-    .icone {
-      font-size: 20px;
-    }
+.btn {
+  flex: 1;
+  padding: 15px;
+  border-radius: 15px;
+  border: none;
+  font-weight: 600;
+  cursor: pointer;
+}
 
-    .acao span {
-      display: block;
-      margin-top: 6px;
-      font-size: 13px;
-    }
+.recebi { background: #00c853; }
+.gastei { background: #d50000; }
 
-    .extrato-titulo {
-      font-size: 15px;
-      margin-bottom: 10px;
-      color: #aaa;
-    }
+/* EXTRATO */
+.item {
+  background: #1a1a1a;
+  padding: 12px;
+  border-radius: 10px;
+  margin-top: 10px;
+}
 
-    .item {
-      background: #151515;
-      padding: 14px;
-      border-radius: 14px;
-      margin-bottom: 10px;
-      display: flex;
-      justify-content: space-between;
-      font-size: 14px;
-    }
+.entrada { color: #00e676; }
+.saida { color: #ff5252; }
 
-    .entrada { color: #00e676; }
-    .saida { color: #ff5252; }
-  </style>
+/* MODAL */
+.modal {
+  position: fixed;
+  bottom: 0;
+  width: 100%;
+  max-width: 420px;
+  background: #111;
+  border-radius: 20px 20px 0 0;
+  padding: 20px;
+  display: none;
+}
+
+.modal input {
+  width: 100%;
+  padding: 15px;
+  border-radius: 10px;
+  border: none;
+  margin-top: 10px;
+  background: #222;
+  color: white;
+}
+
+.modal button {
+  width: 100%;
+  padding: 15px;
+  margin-top: 10px;
+  border: none;
+  border-radius: 10px;
+  font-weight: bold;
+}
+</style>
 </head>
 
 <body>
 
 <div class="app">
 
-  <div class="topo">
-    <div>
-      <div class="saudacao">Olá</div>
-      <div class="nome">Seu saldo</div>
-    </div>
-    <div class="perfil">👤</div>
+<div class="topo">
+  <div class="logo">FluxoZap</div>
+
+  <div class="perfil" onclick="toggleMenu()">
+    <div id="nomeUsuario">Conta</div>
+    <div class="foto">👤</div>
   </div>
+</div>
 
-  <div class="card">
-    <div class="saldo-label">Saldo disponível</div>
-    <div class="saldo">R$ <span id="saldo">0.00</span></div>
-  </div>
+<div class="menu" id="menu">
+  <div onclick="logout()">Sair</div>
+  <div>Alterar dados</div>
+  <div>Pagamento</div>
+</div>
 
-  <div class="acoes">
-    <div class="acao" onclick="entrada()">
-      <div class="icone">＋</div>
-      <span>Recebi</span>
-    </div>
+<div class="card">
+  <div>Saldo disponível</div>
+  <div class="saldo">R$ <span id="saldo">0.00</span></div>
+</div>
 
-    <div class="acao" onclick="saida()">
-      <div class="icone">－</div>
-      <span>Gastei</span>
-    </div>
-  </div>
+<div class="acoes">
+  <button class="btn recebi" onclick="abrirModal('entrada')">Recebi</button>
+  <button class="btn gastei" onclick="abrirModal('saida')">Gastei</button>
+</div>
 
-  <div class="extrato-titulo">Movimentações</div>
-  <div id="lista"></div>
+<div id="lista"></div>
 
+</div>
+
+<div class="modal" id="modal">
+  <h3 id="tituloModal"></h3>
+  <input type="number" id="valor" placeholder="Digite o valor">
+  <button onclick="salvar()">Confirmar</button>
 </div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getFirestore, collection, addDoc, getDocs, query, where } 
-from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { getAuth, onAuthStateChanged } 
-from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { getFirestore, collection, addDoc, getDocs, query, where } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyAh0Qi4lm-ZXQLe4YAca8wYbp5kcU6lY3I",
   authDomain: "fluxozap-10ead.firebaseapp.com",
-  projectId: "fluxozap-10ead",
-  storageBucket: "fluxozap-10ead.firebasestorage.app",
-  messagingSenderId: "743375450552",
-  appId: "1:743375450552:web:48b85313fbc7fc30b29f4d"
+  projectId: "fluxozap-10ead"
 };
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
 
-let saldo = 0;
-let userId = null;
+let tipoAtual = "";
+let userId = "";
 
 onAuthStateChanged(auth, (user) => {
   if (user) {
@@ -185,41 +210,47 @@ onAuthStateChanged(auth, (user) => {
   }
 });
 
-window.entrada = async function() {
-  let valor = parseFloat(prompt("Valor recebido:"));
-  if (!valor) return;
-
-  await addDoc(collection(db, "movimentos"), {
-    tipo: "entrada",
-    valor,
-    userId
-  });
-
-  carregar();
+window.toggleMenu = function() {
+  let m = document.getElementById("menu");
+  m.style.display = m.style.display === "block" ? "none" : "block";
 }
 
-window.saida = async function() {
-  let valor = parseFloat(prompt("Valor gasto:"));
+window.logout = function() {
+  signOut(auth);
+}
+
+window.abrirModal = function(tipo) {
+  tipoAtual = tipo;
+  document.getElementById("modal").style.display = "block";
+  document.getElementById("tituloModal").innerText = tipo === "entrada" ? "Recebimento" : "Gasto";
+}
+
+window.salvar = async function() {
+  let valor = parseFloat(document.getElementById("valor").value);
   if (!valor) return;
 
   await addDoc(collection(db, "movimentos"), {
-    tipo: "saida",
+    tipo: tipoAtual,
     valor,
+    data: new Date().toLocaleString(),
     userId
   });
+
+  document.getElementById("modal").style.display = "none";
+  document.getElementById("valor").value = "";
 
   carregar();
 }
 
 async function carregar() {
-  saldo = 0;
+  let saldo = 0;
   let lista = document.getElementById("lista");
   lista.innerHTML = "";
 
   const q = query(collection(db, "movimentos"), where("userId", "==", userId));
-  const querySnapshot = await getDocs(q);
+  const docs = await getDocs(q);
 
-  querySnapshot.forEach(doc => {
+  docs.forEach(doc => {
     let d = doc.data();
 
     if (d.tipo === "entrada") saldo += d.valor;
@@ -227,10 +258,10 @@ async function carregar() {
 
     lista.innerHTML += `
       <div class="item">
-        <span>${d.tipo === "entrada" ? "Entrada" : "Saída"}</span>
-        <span class="${d.tipo === 'entrada' ? 'entrada' : 'saida'}">
+        <div>${d.tipo === "entrada" ? "Entrada" : "Saída"} - ${d.data}</div>
+        <div class="${d.tipo === "entrada" ? "entrada" : "saida"}">
           R$ ${d.valor.toFixed(2)}
-        </span>
+        </div>
       </div>
     `;
   });
