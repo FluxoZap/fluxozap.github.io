@@ -2,87 +2,116 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <title>FluxoZap 💸</title>
+  <title>FluxoZap</title>
 
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 
   <style>
     body {
       margin: 0;
       font-family: 'Inter', sans-serif;
-      background: #0f0f0f;
+      background: #0b0b0b;
       color: white;
     }
 
-    .container {
-      padding: 20px;
-      max-width: 500px;
+    .app {
+      max-width: 420px;
       margin: auto;
+      padding: 20px;
     }
 
     .topo {
       display: flex;
       justify-content: space-between;
       align-items: center;
+      margin-bottom: 25px;
     }
 
-    .topo h2 {
-      margin: 0;
+    .saudacao {
+      font-size: 14px;
+      color: #aaa;
+    }
+
+    .nome {
       font-size: 20px;
+      font-weight: 600;
     }
 
     .perfil {
+      width: 42px;
+      height: 42px;
       background: #1f1f1f;
-      width: 40px;
-      height: 40px;
       border-radius: 50%;
       display: flex;
       align-items: center;
       justify-content: center;
+      font-size: 18px;
     }
 
     .card {
-      margin-top: 20px;
-      background: linear-gradient(135deg, #00c853, #009624);
-      border-radius: 20px;
-      padding: 20px;
+      background: linear-gradient(135deg, #7b1fa2, #4a148c);
+      border-radius: 22px;
+      padding: 22px;
+      margin-bottom: 25px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+    }
+
+    .saldo-label {
+      font-size: 13px;
+      opacity: 0.8;
     }
 
     .saldo {
-      font-size: 32px;
-      font-weight: bold;
+      font-size: 34px;
+      font-weight: 600;
       margin-top: 5px;
     }
 
     .acoes {
       display: flex;
-      gap: 10px;
-      margin-top: 20px;
+      justify-content: space-between;
+      margin-bottom: 30px;
     }
 
-    .btn {
+    .acao {
       flex: 1;
+      margin: 0 5px;
+      background: #181818;
+      border-radius: 18px;
       padding: 15px;
-      border-radius: 15px;
-      border: none;
-      font-weight: bold;
+      text-align: center;
       cursor: pointer;
+      transition: 0.2s;
     }
 
-    .recebi { background: #00c853; }
-    .gastei { background: #d50000; }
+    .acao:hover {
+      background: #242424;
+    }
 
-    .extrato {
-      margin-top: 25px;
+    .icone {
+      font-size: 20px;
+    }
+
+    .acao span {
+      display: block;
+      margin-top: 6px;
+      font-size: 13px;
+    }
+
+    .extrato-titulo {
+      font-size: 15px;
+      margin-bottom: 10px;
+      color: #aaa;
     }
 
     .item {
+      background: #151515;
+      padding: 14px;
+      border-radius: 14px;
+      margin-bottom: 10px;
       display: flex;
       justify-content: space-between;
-      background: #1c1c1c;
-      padding: 12px;
-      border-radius: 10px;
-      margin-top: 10px;
+      font-size: 14px;
     }
 
     .entrada { color: #00e676; }
@@ -92,27 +121,35 @@
 
 <body>
 
-<div class="container">
+<div class="app">
 
   <div class="topo">
-    <h2>FluxoZap 💸</h2>
+    <div>
+      <div class="saudacao">Olá</div>
+      <div class="nome">Seu saldo</div>
+    </div>
     <div class="perfil">👤</div>
   </div>
 
   <div class="card">
-    <div>Saldo disponível</div>
+    <div class="saldo-label">Saldo disponível</div>
     <div class="saldo">R$ <span id="saldo">0.00</span></div>
   </div>
 
   <div class="acoes">
-    <button class="btn recebi" onclick="entrada()">Recebi</button>
-    <button class="btn gastei" onclick="saida()">Gastei</button>
+    <div class="acao" onclick="entrada()">
+      <div class="icone">＋</div>
+      <span>Recebi</span>
+    </div>
+
+    <div class="acao" onclick="saida()">
+      <div class="icone">－</div>
+      <span>Gastei</span>
+    </div>
   </div>
 
-  <div class="extrato">
-    <h3>Movimentações</h3>
-    <div id="lista"></div>
-  </div>
+  <div class="extrato-titulo">Movimentações</div>
+  <div id="lista"></div>
 
 </div>
 
@@ -190,7 +227,7 @@ async function carregar() {
 
     lista.innerHTML += `
       <div class="item">
-        <span>${d.tipo}</span>
+        <span>${d.tipo === "entrada" ? "Entrada" : "Saída"}</span>
         <span class="${d.tipo === 'entrada' ? 'entrada' : 'saida'}">
           R$ ${d.valor.toFixed(2)}
         </span>
