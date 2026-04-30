@@ -2,6 +2,7 @@
 <html>
 <head>
   <title>FluxoZap 💸</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
 
   <style>
     body {
@@ -20,8 +21,7 @@
     }
 
     h1 {
-      font-size: 28px;
-      margin-bottom: 30px;
+      margin-bottom: 25px;
     }
 
     input {
@@ -32,27 +32,20 @@
       border: none;
       background: #1c1c1c;
       color: white;
-      font-size: 14px;
     }
 
     button {
       width: 100%;
       padding: 14px;
-      margin-top: 10px;
       border-radius: 12px;
       border: none;
+      margin-top: 10px;
       font-weight: bold;
-      font-size: 15px;
       cursor: pointer;
     }
 
-    .login {
-      background: #00c853;
-    }
-
-    .criar {
-      background: #2962ff;
-    }
+    .login { background: #00c853; }
+    .criar { background: #2962ff; }
   </style>
 </head>
 
@@ -61,7 +54,7 @@
 <div class="box">
   <h1>FluxoZap 💸</h1>
 
-  <input id="email" placeholder="Email ou CPF">
+  <input id="email" placeholder="Email">
   <input id="senha" type="password" placeholder="Senha">
 
   <button class="login" onclick="login()">Entrar</button>
@@ -70,20 +63,16 @@
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getAuth, signInWithEmailAndPassword(auth, email.value, senha.value)
-  .then((userCredential) => {
-    console.log("Logado:", userCredential.user);
-    window.location.href = "dashboard.html";
-  })
-  .catch((error) => {
-    alert("Erro ao entrar: " + error.message);
-  }); } 
+import { getAuth, signInWithEmailAndPassword } 
 from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyAh0Qi4lm-ZXQLe4YAca8wYbp5kcU6lY3I",
   authDomain: "fluxozap-10ead.firebaseapp.com",
   projectId: "fluxozap-10ead",
+  storageBucket: "fluxozap-10ead.firebasestorage.app",
+  messagingSenderId: "743375450552",
+  appId: "1:743375450552:web:48b85313fbc7fc30b29f4d"
 };
 
 const app = initializeApp(firebaseConfig);
@@ -91,12 +80,16 @@ const auth = getAuth(app);
 
 window.login = function() {
   signInWithEmailAndPassword(auth, email.value, senha.value)
-    .then(() => window.location = "dashboard.html")
-    .catch(() => alert("Erro ao entrar"));
+    .then((userCredential) => {
+      window.location.href = "dashboard.html";
+    })
+    .catch((error) => {
+      alert("Erro: " + error.message);
+    });
 }
 
 window.irCadastro = function() {
-  window.location = "cadastro.html";
+  window.location.href = "cadastro.html";
 }
 </script>
 
