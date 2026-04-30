@@ -2,54 +2,94 @@
 <html>
 <head>
   <title>FluxoZap 💸</title>
+
   <style>
     body {
-      background: #0f0f0f;
+      margin: 0;
+      font-family: 'Segoe UI', sans-serif;
+      background: linear-gradient(180deg, #0f0f0f, #1a1a1a);
       color: white;
-      font-family: Arial;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+
+    .card {
+      background: #151515;
+      padding: 25px;
+      border-radius: 15px;
+      width: 320px;
+      box-shadow: 0 0 20px rgba(0,0,0,0.5);
+    }
+
+    h2 {
       text-align: center;
+      margin-bottom: 20px;
+      font-weight: 600;
     }
 
     input, select {
-      margin: 5px;
-      padding: 10px;
-      width: 80%;
-      border-radius: 8px;
+      width: 100%;
+      padding: 12px;
+      margin: 6px 0;
+      border-radius: 10px;
       border: none;
+      background: #222;
+      color: white;
+      outline: none;
+    }
+
+    input::placeholder {
+      color: #888;
     }
 
     button {
-      padding: 10px;
-      margin: 10px;
-      border-radius: 8px;
+      width: 100%;
+      padding: 12px;
+      margin-top: 10px;
+      border-radius: 10px;
       border: none;
-      width: 85%;
       font-weight: bold;
       cursor: pointer;
+      font-size: 15px;
+    }
+
+    .btn-cadastrar {
+      background: #00c853;
+      color: white;
+    }
+
+    .btn-login {
+      background: #2962ff;
+      color: white;
     }
   </style>
 </head>
+
 <body>
 
-<h2>FluxoZap 💸</h2>
+<div class="card">
+  <h2>FluxoZap 💸</h2>
 
-<input id="nome" placeholder="Nome completo">
-<input id="email" placeholder="Email">
-<input id="senha" type="password" placeholder="Senha">
-<input id="whatsapp" placeholder="WhatsApp">
+  <input id="nome" placeholder="Nome completo">
+  <input id="email" placeholder="Email">
+  <input id="senha" type="password" placeholder="Senha">
+  <input id="whatsapp" placeholder="WhatsApp">
 
-<input id="profissao" placeholder="Profissão">
-<input id="salario" type="number" placeholder="Salário">
+  <input id="profissao" placeholder="Profissão">
+  <input id="salario" type="number" placeholder="Salário">
 
-<select id="tipo">
-  <option value="fixo">Salário Fixo</option>
-  <option value="variavel">Variável</option>
-</select>
+  <select id="tipo">
+    <option value="fixo">Salário Fixo</option>
+    <option value="variavel">Variável</option>
+  </select>
 
-<input id="dataRecebe" type="date">
+  <input id="dataRecebe" type="date">
 
-<button onclick="cadastrar()">Cadastrar</button>
-<button onclick="login()">Entrar</button>
+  <button class="btn-cadastrar" onclick="cadastrar()">Cadastrar</button>
+  <button class="btn-login" onclick="login()">Entrar</button>
+</div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
