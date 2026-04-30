@@ -8,7 +8,7 @@
     body {
       margin: 0;
       font-family: 'Poppins', sans-serif;
-      background: #0a0a0a;
+      background: linear-gradient(180deg, #0a0a0a, #111);
       color: white;
     }
 
@@ -22,49 +22,88 @@
       align-items: center;
     }
 
-    .titulo {
+    .saudacao {
+      font-size: 14px;
+      color: #aaa;
+    }
+
+    .nome {
       font-size: 20px;
       font-weight: 600;
     }
 
+    .perfil {
+      background: #1c1c1c;
+      padding: 10px;
+      border-radius: 50%;
+    }
+
     .card {
       margin-top: 20px;
-      background: linear-gradient(135deg, #00c853, #009624);
-      padding: 20px;
-      border-radius: 20px;
+      padding: 25px;
+      border-radius: 25px;
+      background: linear-gradient(135deg, #00c853, #00a844);
+      box-shadow: 0 15px 40px rgba(0,0,0,0.6);
+    }
+
+    .saldo-label {
+      font-size: 14px;
+      opacity: 0.9;
     }
 
     .saldo {
-      font-size: 32px;
-      font-weight: bold;
+      font-size: 36px;
+      font-weight: 600;
+      margin-top: 5px;
     }
 
     .acoes {
       display: flex;
-      gap: 10px;
-      margin-top: 20px;
+      gap: 15px;
+      margin-top: 25px;
     }
 
-    .btn {
+    .acao {
       flex: 1;
-      padding: 15px;
-      border-radius: 15px;
-      border: none;
-      font-weight: bold;
+      background: #1c1c1c;
+      padding: 18px;
+      border-radius: 18px;
+      text-align: center;
       cursor: pointer;
+      transition: 0.2s;
     }
 
-    .entrada { background: #00c853; }
-    .saida { background: #d50000; }
+    .acao:hover {
+      background: #2a2a2a;
+    }
+
+    .acao strong {
+      display: block;
+      margin-top: 5px;
+      font-size: 14px;
+    }
+
+    .extrato {
+      margin-top: 30px;
+    }
+
+    .extrato h3 {
+      font-weight: 500;
+      margin-bottom: 15px;
+    }
 
     .item {
+      background: #1a1a1a;
+      padding: 14px;
+      border-radius: 14px;
+      margin-bottom: 10px;
       display: flex;
       justify-content: space-between;
-      background: #1c1c1c;
-      padding: 12px;
-      border-radius: 10px;
-      margin-top: 10px;
+      align-items: center;
     }
+
+    .entrada { color: #00e676; }
+    .saida { color: #ff5252; }
   </style>
 </head>
 
@@ -73,27 +112,33 @@
 <div class="container">
 
   <div class="topo">
-    <div class="titulo">FluxoZap 💸</div>
-    <div>👤</div>
+    <div>
+      <div class="saudacao">Olá 👋</div>
+      <div class="nome" id="nomeUsuario">Carregando...</div>
+    </div>
+    <div class="perfil">👤</div>
   </div>
 
   <div class="card">
-    <div>Saldo disponível</div>
+    <div class="saldo-label">Saldo disponível</div>
     <div class="saldo">R$ <span id="saldo">0.00</span></div>
   </div>
 
   <div class="acoes">
-    <button class="btn entrada" onclick="entrada()">Recebi</button>
-    <button class="btn saida" onclick="saida()">Gastei</button>
+    <div class="acao" onclick="entrada()">➕ <strong>Recebi</strong></div>
+    <div class="acao" onclick="saida()">➖ <strong>Gastei</strong></div>
   </div>
 
-  <div id="lista"></div>
+  <div class="extrato">
+    <h3>Movimentações</h3>
+    <div id="lista"></div>
+  </div>
 
 </div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getFirestore, collection, addDoc, getDocs, query, where } 
+import { getFirestore, collection, addDoc, getDocs, query, where, doc, getDoc } 
 from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { getAuth, onAuthStateChanged } 
 from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
@@ -114,9 +159,17 @@ const auth = getAuth(app);
 let saldo = 0;
 let userId = null;
 
-onAuthStateChanged(auth, (user) => {
+onAuthStateChanged(auth, async (user) => {
   if (user) {
     userId = user.uid;
+
+    // pegar nome do usuário
+    const docRef = doc(db, "usuarios", userId);
+    const docSnap = await getDoc(docRef);
+    if (docSnap.exists()) {
+      document.getElementById("nomeUsuario").innerText = docSnap.data().nome;
+    }
+
     carregar();
   } else {
     window.location.href = "index.html";
@@ -166,7 +219,9 @@ async function carregar() {
     lista.innerHTML += `
       <div class="item">
         <span>${d.tipo}</span>
-        <span>R$ ${d.valor}</span>
+        <span class="${d.tipo === 'entrada' ? 'entrada' : 'saida'}">
+          R$ ${d.valor}
+        </span>
       </div>
     `;
   });
