@@ -1,31 +1,111 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>FluxoZap</title>
+  <title>FluxoZap 💸</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', Arial;
+      background: #0f0f0f;
+      color: white;
+    }
+
+    .topo {
+      display: flex;
+      justify-content: space-between;
+      padding: 15px;
+      background: #111;
+    }
+
+    .saldo {
+      font-size: 22px;
+      font-weight: bold;
+    }
+
+    .conta {
+      cursor: pointer;
+    }
+
+    .menu {
+      position: absolute;
+      right: 10px;
+      top: 60px;
+      background: #1a1a1a;
+      padding: 10px;
+      border-radius: 10px;
+      display: none;
+    }
+
+    .menu p {
+      margin: 5px 0;
+      cursor: pointer;
+    }
+
+    .extrato {
+      padding: 15px;
+    }
+
+    .botoes {
+      position: fixed;
+      bottom: 0;
+      width: 100%;
+      display: flex;
+    }
+
+    .btn {
+      flex: 1;
+      padding: 20px;
+      text-align: center;
+      font-size: 18px;
+      cursor: pointer;
+    }
+
+    .entrada { background: green; }
+    .saida { background: red; }
+
+    input {
+      padding: 8px;
+      margin: 5px;
+      border-radius: 5px;
+      border: none;
+    }
+  </style>
 </head>
 <body>
 
-<h2>FluxoZap 💰</h2>
-<h3>Saldo: R$ <span id="saldo">0.00</span></h3>
+<div class="topo">
+  <div class="saldo">FluxoZap 💸<br>Saldo: R$ <span id="saldo">0.00</span></div>
+  <div class="conta" onclick="toggleMenu()">👤</div>
+</div>
 
-<input id="desc" placeholder="Descrição">
-<input id="valor" type="number" step="0.01" placeholder="Valor">
+<div class="menu" id="menu">
+  <p onclick="logout()">Sair</p>
+  <p>Editar cadastro</p>
+  <p>Pagamento</p>
+</div>
 
-<br><br>
+<div class="extrato">
+  <h3>Extrato</h3>
 
-<button onclick="entrada()">Recebi</button>
-<button onclick="saida()">Gastei</button>
+  <input type="date" id="dataInicio">
+  <input type="date" id="dataFim">
+  <button onclick="filtrar()">Filtrar</button>
 
-<div id="lista"></div>
+  <div id="lista"></div>
+</div>
+
+<div class="botoes">
+  <div class="btn entrada" onclick="entrada()">Recebi</div>
+  <div class="btn saida" onclick="saida()">Gastei</div>
+</div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getFirestore, collection, addDoc, getDocs, query, where } 
 from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { getAuth, onAuthStateChanged } 
+import { getAuth, onAuthStateChanged, signOut } 
 from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
-// SUA CONFIG
 const firebaseConfig = {
   apiKey: "AIzaSyAh0Qi4lm-ZXQLe4YAca8wYbp5kcU6lY3I",
   authDomain: "fluxozap-10ead.firebaseapp.com",
@@ -41,6 +121,7 @@ const auth = getAuth(app);
 
 let saldo = 0;
 let userId = null;
+let dados = [];
 
 onAuthStateChanged(auth, (user) => {
   if (user) {
@@ -51,33 +132,38 @@ onAuthStateChanged(auth, (user) => {
   }
 });
 
-window.entrada = async function() {
-  let desc = document.getElementById("desc").value;
-  let valor = parseFloat(document.getElementById("valor").value);
+window.toggleMenu = function() {
+  let menu = document.getElementById("menu");
+  menu.style.display = menu.style.display === "block" ? "none" : "block";
+}
 
-  if (!valor) return alert("Digite um valor");
+window.logout = function() {
+  signOut(auth);
+}
+
+window.entrada = async function() {
+  let valor = parseFloat(prompt("Valor recebido:"));
+  if (!valor) return;
 
   await addDoc(collection(db, "movimentos"), {
     tipo: "entrada",
-    desc,
     valor,
-    userId
+    userId,
+    data: new Date().toISOString()
   });
 
   carregar();
 }
 
 window.saida = async function() {
-  let desc = document.getElementById("desc").value;
-  let valor = parseFloat(document.getElementById("valor").value);
-
-  if (!valor) return alert("Digite um valor");
+  let valor = parseFloat(prompt("Valor gasto:"));
+  if (!valor) return;
 
   await addDoc(collection(db, "movimentos"), {
     tipo: "saida",
-    desc,
     valor,
-    userId
+    userId,
+    data: new Date().toISOString()
   });
 
   carregar();
@@ -85,6 +171,7 @@ window.saida = async function() {
 
 async function carregar() {
   saldo = 0;
+  dados = [];
   let lista = document.getElementById("lista");
   lista.innerHTML = "";
 
@@ -93,14 +180,36 @@ async function carregar() {
 
   querySnapshot.forEach(doc => {
     let d = doc.data();
+    dados.push(d);
 
     if (d.tipo === "entrada") saldo += d.valor;
     else saldo -= d.valor;
-
-    lista.innerHTML += `<p>${d.tipo} - ${d.desc} - R$ ${d.valor.toFixed(2)}</p>`;
   });
 
   document.getElementById("saldo").innerText = saldo.toFixed(2);
+
+  mostrar(dados);
+}
+
+function mostrar(listaDados) {
+  let lista = document.getElementById("lista");
+  lista.innerHTML = "";
+
+  listaDados.forEach(d => {
+    lista.innerHTML += `<p>${d.tipo} - R$ ${d.valor}</p>`;
+  });
+}
+
+window.filtrar = function() {
+  let ini = new Date(document.getElementById("dataInicio").value);
+  let fim = new Date(document.getElementById("dataFim").value);
+
+  let filtrado = dados.filter(d => {
+    let data = new Date(d.data);
+    return data >= ini && data <= fim;
+  });
+
+  mostrar(filtrado);
 }
 </script>
 
