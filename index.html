@@ -1,33 +1,66 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>FluxoZap</title>
+  <title>FluxoZap 💸</title>
 </head>
 <body>
 
-<h2>FluxoZap 💰</h2>
+<h2>FluxoZap 💸</h2>
 
-<input id="email" placeholder="Email">
-<input id="senha" type="password" placeholder="Senha">
+<input id="nome" placeholder="Nome completo"><br>
+<input id="email" placeholder="Email"><br>
+<input id="senha" type="password" placeholder="Senha"><br>
+<input id="profissao" placeholder="Profissão"><br>
+<input id="salario" type="number" placeholder="Salário"><br>
+
+<select id="tipo">
+  <option value="fixo">Salário Fixo</option>
+  <option value="variavel">Variável</option>
+</select><br>
+
+<input id="dataRecebe" type="date"><br>
 
 <button onclick="cadastrar()">Cadastrar</button>
 <button onclick="login()">Entrar</button>
 
 <script type="module">
-import { auth } from "./firebase.js";
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword } 
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword } 
 from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { getFirestore, setDoc, doc } 
+from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-window.cadastrar = function() {
-  createUserWithEmailAndPassword(auth, email.value, senha.value)
-    .then(() => alert("Conta criada!"))
-    .catch(e => alert(e.message));
+const firebaseConfig = {
+  apiKey: "AIzaSyAh0Qi4lm-ZXQLe4YAca8wYbp5kcU6lY3I",
+  authDomain: "fluxozap-10ead.firebaseapp.com",
+  projectId: "fluxozap-10ead",
+  storageBucket: "fluxozap-10ead.firebasestorage.app",
+  messagingSenderId: "743375450552",
+  appId: "1:743375450552:web:48b85313fbc7fc30b29f4d"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+window.cadastrar = async function() {
+  let user = await createUserWithEmailAndPassword(auth, email.value, senha.value);
+
+  await setDoc(doc(db, "usuarios", user.user.uid), {
+    nome: nome.value,
+    email: email.value,
+    profissao: profissao.value,
+    salario: parseFloat(salario.value),
+    tipo: tipo.value,
+    dataRecebe: dataRecebe.value
+  });
+
+  alert("Cadastro completo!");
 }
 
 window.login = function() {
   signInWithEmailAndPassword(auth, email.value, senha.value)
-    .then(() => window.location = "dashboard.html")
-    .catch(e => alert(e.message));
+    .then(() => window.location = "dashboard.html");
 }
 </script>
 
