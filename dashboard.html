@@ -2,233 +2,23 @@
 <html>
 <head>
   <title>FluxoZap 💸</title>
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
-
   <style>
     body {
-      margin: 0;
-      font-family: 'Poppins', sans-serif;
-      background: linear-gradient(180deg, #0a0a0a, #111);
+      background: black;
       color: white;
-    }
-
-    .container {
+      font-family: Arial;
       padding: 20px;
     }
-
-    .topo {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    .saudacao {
-      font-size: 14px;
-      color: #aaa;
-    }
-
-    .nome {
-      font-size: 20px;
-      font-weight: 600;
-    }
-
-    .perfil {
-      background: #1c1c1c;
-      padding: 10px;
-      border-radius: 50%;
-    }
-
-    .card {
-      margin-top: 20px;
-      padding: 25px;
-      border-radius: 25px;
-      background: linear-gradient(135deg, #00c853, #00a844);
-      box-shadow: 0 15px 40px rgba(0,0,0,0.6);
-    }
-
-    .saldo-label {
-      font-size: 14px;
-      opacity: 0.9;
-    }
-
-    .saldo {
-      font-size: 36px;
-      font-weight: 600;
-      margin-top: 5px;
-    }
-
-    .acoes {
-      display: flex;
-      gap: 15px;
-      margin-top: 25px;
-    }
-
-    .acao {
-      flex: 1;
-      background: #1c1c1c;
-      padding: 18px;
-      border-radius: 18px;
-      text-align: center;
-      cursor: pointer;
-      transition: 0.2s;
-    }
-
-    .acao:hover {
-      background: #2a2a2a;
-    }
-
-    .acao strong {
-      display: block;
-      margin-top: 5px;
-      font-size: 14px;
-    }
-
-    .extrato {
-      margin-top: 30px;
-    }
-
-    .extrato h3 {
-      font-weight: 500;
-      margin-bottom: 15px;
-    }
-
-    .item {
-      background: #1a1a1a;
-      padding: 14px;
-      border-radius: 14px;
-      margin-bottom: 10px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    .entrada { color: #00e676; }
-    .saida { color: #ff5252; }
   </style>
 </head>
 
 <body>
 
-<div class="container">
+<h1 style="color:red">AGORA VAI</h1>
 
-  <div class="topo">
-    <div>
-      <div class="saudacao">Olá 👋</div>
-      <div class="nome" id="nomeUsuario">Carregando...</div>
-    </div>
-    <div class="perfil">👤</div>
-  </div>
+<h2>FluxoZap funcionando 🚀</h2>
 
-  <div class="card">
-    <div class="saldo-label">Saldo disponível</div>
-    <div class="saldo">R$ <span id="saldo">0.00</span></div>
-  </div>
-
-  <div class="acoes">
-    <div class="acao" onclick="entrada()">➕ <strong>Recebi</strong></div>
-    <div class="acao" onclick="saida()">➖ <strong>Gastei</strong></div>
-  </div>
-
-  <div class="extrato">
-    <h3>Movimentações</h3>
-    <div id="lista"></div>
-  </div>
-
-</div>
-
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getFirestore, collection, addDoc, getDocs, query, where, doc, getDoc } 
-from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { getAuth, onAuthStateChanged } 
-from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-
-const firebaseConfig = {
-  apiKey: "AIzaSyAh0Qi4lm-ZXQLe4YAca8wYbp5kcU6lY3I",
-  authDomain: "fluxozap-10ead.firebaseapp.com",
-  projectId: "fluxozap-10ead",
-  storageBucket: "fluxozap-10ead.firebasestorage.app",
-  messagingSenderId: "743375450552",
-  appId: "1:743375450552:web:48b85313fbc7fc30b29f4d"
-};
-
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
-const auth = getAuth(app);
-
-let saldo = 0;
-let userId = null;
-
-onAuthStateChanged(auth, async (user) => {
-  if (user) {
-    userId = user.uid;
-
-    // pegar nome do usuário
-    const docRef = doc(db, "usuarios", userId);
-    const docSnap = await getDoc(docRef);
-    if (docSnap.exists()) {
-      document.getElementById("nomeUsuario").innerText = docSnap.data().nome;
-    }
-
-    carregar();
-  } else {
-    window.location.href = "index.html";
-  }
-});
-
-window.entrada = async function() {
-  let valor = parseFloat(prompt("Valor recebido:"));
-  if (!valor) return;
-
-  await addDoc(collection(db, "movimentos"), {
-    tipo: "entrada",
-    valor,
-    userId
-  });
-
-  carregar();
-}
-
-window.saida = async function() {
-  let valor = parseFloat(prompt("Valor gasto:"));
-  if (!valor) return;
-
-  await addDoc(collection(db, "movimentos"), {
-    tipo: "saida",
-    valor,
-    userId
-  });
-
-  carregar();
-}
-
-async function carregar() {
-  saldo = 0;
-  let lista = document.getElementById("lista");
-  lista.innerHTML = "";
-
-  const q = query(collection(db, "movimentos"), where("userId", "==", userId));
-  const querySnapshot = await getDocs(q);
-
-  querySnapshot.forEach(doc => {
-    let d = doc.data();
-
-    if (d.tipo === "entrada") saldo += d.valor;
-    else saldo -= d.valor;
-
-    lista.innerHTML += `
-      <div class="item">
-        <span>${d.tipo}</span>
-        <span class="${d.tipo === 'entrada' ? 'entrada' : 'saida'}">
-          R$ ${d.valor}
-        </span>
-      </div>
-    `;
-  });
-
-  document.getElementById("saldo").innerText = saldo.toFixed(2);
-}
-</script>
+<p>Se você está vendo isso, o site atualizou!</p>
 
 </body>
 </html>
