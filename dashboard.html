@@ -8,7 +8,7 @@
     body {
       margin: 0;
       font-family: 'Poppins', sans-serif;
-      background: linear-gradient(180deg, #0a0a0a, #141414);
+      background: #0a0a0a;
       color: white;
     }
 
@@ -22,93 +22,48 @@
       align-items: center;
     }
 
-    .nome {
-      font-size: 14px;
-      color: #aaa;
-    }
-
     .titulo {
       font-size: 20px;
       font-weight: 600;
     }
 
-    .perfil {
-      background: #1c1c1c;
-      padding: 10px;
-      border-radius: 50%;
-    }
-
     .card {
       margin-top: 20px;
-      background: linear-gradient(135deg, #00c853, #00b248);
+      background: linear-gradient(135deg, #00c853, #009624);
       padding: 20px;
       border-radius: 20px;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-    }
-
-    .saldo-label {
-      font-size: 14px;
-      opacity: 0.8;
     }
 
     .saldo {
       font-size: 32px;
-      font-weight: 600;
-      margin-top: 5px;
+      font-weight: bold;
     }
 
     .acoes {
       display: flex;
-      gap: 15px;
+      gap: 10px;
       margin-top: 20px;
     }
 
-    .acao {
+    .btn {
       flex: 1;
-      background: #1c1c1c;
       padding: 15px;
       border-radius: 15px;
-      text-align: center;
+      border: none;
+      font-weight: bold;
       cursor: pointer;
-      transition: 0.2s;
     }
 
-    .acao:hover {
-      background: #2a2a2a;
-    }
-
-    .acao span {
-      display: block;
-      margin-top: 5px;
-      font-size: 14px;
-    }
-
-    .extrato {
-      margin-top: 25px;
-    }
-
-    .extrato h3 {
-      font-weight: 500;
-      margin-bottom: 10px;
-    }
+    .entrada { background: #00c853; }
+    .saida { background: #d50000; }
 
     .item {
       display: flex;
       justify-content: space-between;
-      background: #1a1a1a;
+      background: #1c1c1c;
       padding: 12px;
-      border-radius: 12px;
-      margin-bottom: 8px;
-    }
-
-    .valor-entrada {
-      color: #00e676;
-      font-weight: bold;
-    }
-
-    .valor-saida {
-      color: #ff5252;
-      font-weight: bold;
+      border-radius: 10px;
+      margin-top: 10px;
     }
   </style>
 </head>
@@ -118,27 +73,21 @@
 <div class="container">
 
   <div class="topo">
-    <div>
-      <div class="nome">Olá 👋</div>
-      <div class="titulo">FluxoZap 💸</div>
-    </div>
-    <div class="perfil">👤</div>
+    <div class="titulo">FluxoZap 💸</div>
+    <div>👤</div>
   </div>
 
   <div class="card">
-    <div class="saldo-label">Saldo disponível</div>
+    <div>Saldo disponível</div>
     <div class="saldo">R$ <span id="saldo">0.00</span></div>
   </div>
 
   <div class="acoes">
-    <div class="acao" onclick="entrada()">➕<span>Recebi</span></div>
-    <div class="acao" onclick="saida()">➖<span>Gastei</span></div>
+    <button class="btn entrada" onclick="entrada()">Recebi</button>
+    <button class="btn saida" onclick="saida()">Gastei</button>
   </div>
 
-  <div class="extrato">
-    <h3>Movimentações</h3>
-    <div id="lista"></div>
-  </div>
+  <div id="lista"></div>
 
 </div>
 
@@ -150,9 +99,12 @@ import { getAuth, onAuthStateChanged }
 from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
 const firebaseConfig = {
-  apiKey: "AIzaSy...",
+  apiKey: "AIzaSyAh0Qi4lm-ZXQLe4YAca8wYbp5kcU6lY3I",
   authDomain: "fluxozap-10ead.firebaseapp.com",
   projectId: "fluxozap-10ead",
+  storageBucket: "fluxozap-10ead.firebasestorage.app",
+  messagingSenderId: "743375450552",
+  appId: "1:743375450552:web:48b85313fbc7fc30b29f4d"
 };
 
 const app = initializeApp(firebaseConfig);
@@ -167,7 +119,7 @@ onAuthStateChanged(auth, (user) => {
     userId = user.uid;
     carregar();
   } else {
-    window.location = "index.html";
+    window.location.href = "index.html";
   }
 });
 
@@ -214,9 +166,7 @@ async function carregar() {
     lista.innerHTML += `
       <div class="item">
         <span>${d.tipo}</span>
-        <span class="${d.tipo === 'entrada' ? 'valor-entrada' : 'valor-saida'}">
-          R$ ${d.valor}
-        </span>
+        <span>R$ ${d.valor}</span>
       </div>
     `;
   });
