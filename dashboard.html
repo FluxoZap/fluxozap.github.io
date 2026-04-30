@@ -11,137 +11,138 @@
 body{
   margin:0;
   font-family:'Inter',sans-serif;
-  background:linear-gradient(180deg,#0a0a0a,#111);
+  background:#0f1115; /* fundo escuro uniforme */
   color:white;
 }
 
-/* TELA CHEIA */
-.app{
-  width:100%;
+/* LAYOUT */
+.container{
+  display:flex;
   height:100vh;
-  padding:25px;
-  box-sizing:border-box;
-  display:grid;
-  grid-template-columns:1fr 1fr;
-  grid-gap:20px;
 }
 
-/* BLOCO */
-.bloco{
-  background:#141414;
-  border-radius:18px;
+/* MENU LATERAL */
+.sidebar{
+  width:220px;
+  background:#15171c;
   padding:20px;
+}
+
+.sidebar h2{
+  font-size:20px;
+}
+
+.sidebar div{
+  margin-top:20px;
+  cursor:pointer;
+  color:#bbb;
+}
+
+/* CONTEÚDO */
+.main{
+  flex:1;
+  padding:25px;
+  overflow:auto;
+}
+
+/* BLOCOS */
+.bloco{
+  background:#1a1d23;
+  padding:20px;
+  border-radius:15px;
+  margin-bottom:20px;
 }
 
 /* SALDO */
 .saldo{
   font-size:40px;
   font-weight:bold;
-  margin-top:10px;
 }
 
-/* PERFIL */
-.perfil{
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-}
-
-.perfil img{
-  width:45px;
-  border-radius:50%;
-}
-
-/* INPUTS */
-.input-area{
-  display:flex;
-  gap:10px;
-  margin-top:10px;
-}
-
+/* INPUT */
 input{
-  flex:1;
-  padding:14px;
+  padding:12px;
   border-radius:10px;
   border:none;
-  background:#222;
+  background:#2a2d35;
   color:white;
+  margin-right:10px;
 }
 
+/* BOTÕES */
 button{
-  padding:14px;
+  padding:12px;
   border:none;
   border-radius:10px;
   font-weight:bold;
-  cursor:pointer;
 }
 
 .recebi{background:#00c853;}
 .gastei{background:#d50000;}
 
-/* GRAFICO */
-canvas{
-  max-height:200px;
+/* ALERTA */
+.alerta{
+  background:#ff1744;
+  padding:10px;
+  border-radius:10px;
+  margin-top:10px;
+  display:none;
 }
 
 /* EXTRATO */
 .item{
-  margin-top:8px;
-  font-size:14px;
-}
-
-/* RESPONSIVO */
-@media(max-width:900px){
-  .app{
-    grid-template-columns:1fr;
-    height:auto;
-  }
+  margin-top:10px;
 }
 </style>
 </head>
 
 <body>
 
-<div class="app">
+<div class="container">
 
-<!-- SALDO -->
+<!-- MENU -->
+<div class="sidebar">
+  <h2>FluxoZap</h2>
+
+  <div>Dashboard</div>
+  <div>Extrato</div>
+  <div>Conta</div>
+</div>
+
+<!-- CONTEÚDO -->
+<div class="main">
+
 <div class="bloco">
   <div>Saldo Total</div>
   <div class="saldo">R$ <span id="saldo">0.00</span></div>
+  <div id="alerta" class="alerta">⚠️ Você já gastou mais de 75% do mês!</div>
 </div>
 
-<!-- CONTA -->
-<div class="bloco perfil">
-  <div>
-    <div id="nomeUsuario">Usuário</div>
-    <small>Conta</small>
-  </div>
-  <img src="https://i.pravatar.cc/100">
-</div>
-
-<!-- RECEBI / GASTEI -->
 <div class="bloco">
-  <div>Recebimento</div>
-  <div class="input-area">
-    <input id="entradaValor" type="number" placeholder="Valor recebido">
-    <button class="recebi" onclick="addEntrada()">+</button>
-  </div>
+  <input type="number" id="entradaValor" placeholder="Recebido">
+  <button class="recebi" onclick="addEntrada()">+</button>
 
-  <div style="margin-top:15px;">Gasto</div>
-  <div class="input-area">
-    <input id="saidaValor" type="number" placeholder="Valor gasto">
-    <button class="gastei" onclick="addSaida()">-</button>
-  </div>
+  <br><br>
+
+  <input type="number" id="saidaValor" placeholder="Gasto">
+  <button class="gastei" onclick="addSaida()">-</button>
 </div>
 
-<!-- GRAFICO + EXTRATO -->
 <div class="bloco">
+
+  <!-- FILTRO -->
+  <input type="date" id="dataInicio">
+  <input type="date" id="dataFim">
+  <button onclick="carregar()">Filtrar</button>
+
   <canvas id="grafico"></canvas>
   <div id="percentual"></div>
-  <hr style="border-color:#333; margin:15px 0;">
+
   <div id="lista"></div>
+
 </div>
 
+</div>
 </div>
 
 <script type="module">
@@ -165,40 +166,37 @@ let chart;
 onAuthStateChanged(auth,(user)=>{
   if(user){
     userId=user.uid;
-    document.getElementById("nomeUsuario").innerText=user.email;
     carregar();
   }else{
     window.location.href="index.html";
   }
 });
 
-window.addEntrada = async function(){
+window.addEntrada=async function(){
   let valor=parseFloat(document.getElementById("entradaValor").value);
   if(!valor) return;
 
   await addDoc(collection(db,"movimentos"),{
     tipo:"entrada",
     valor,
-    data:new Date().toLocaleString(),
+    data:new Date().toISOString(),
     userId
   });
 
-  document.getElementById("entradaValor").value="";
   carregar();
 }
 
-window.addSaida = async function(){
+window.addSaida=async function(){
   let valor=parseFloat(document.getElementById("saidaValor").value);
   if(!valor) return;
 
   await addDoc(collection(db,"movimentos"),{
     tipo:"saida",
     valor,
-    data:new Date().toLocaleString(),
+    data:new Date().toISOString(),
     userId
   });
 
-  document.getElementById("saidaValor").value="";
   carregar();
 }
 
@@ -207,18 +205,24 @@ async function carregar(){
   let lista=document.getElementById("lista");
   lista.innerHTML="";
 
+  let inicio=document.getElementById("dataInicio").value;
+  let fim=document.getElementById("dataFim").value;
+
   const q=query(collection(db,"movimentos"),where("userId","==",userId));
   const docs=await getDocs(q);
 
   docs.forEach(doc=>{
     let d=doc.data();
 
+    if(inicio && d.data < inicio) return;
+    if(fim && d.data > fim) return;
+
     if(d.tipo==="entrada"){saldo+=d.valor;entrada+=d.valor;}
     else{saldo-=d.valor;saida+=d.valor;}
 
     lista.innerHTML+=`
       <div class="item">
-        ${d.tipo==="entrada"?"Entrada":"Saída"} - ${d.data}
+        ${d.tipo==="entrada"?"Entrada":"Saída"} - ${new Date(d.data).toLocaleString()}
         <br>
         <strong style="color:${d.tipo==="entrada"?"#00e676":"#ff5252"}">
         R$ ${d.valor.toFixed(2)}
@@ -229,6 +233,12 @@ async function carregar(){
 
   document.getElementById("saldo").innerText=saldo.toFixed(2);
 
+  // ALERTA 75%
+  let percGasto = entrada ? (saida/entrada)*100 : 0;
+  document.getElementById("alerta").style.display =
+    percGasto >= 75 ? "block" : "none";
+
+  // porcentagem positiva
   let total=entrada+saida;
   let perc=total?((entrada/total)*100).toFixed(1):0;
   document.getElementById("percentual").innerText="Positivo: "+perc+"%";
@@ -242,7 +252,7 @@ async function carregar(){
       labels:['Recebido','Gasto'],
       datasets:[{
         data:[entrada,saida],
-        backgroundColor:['#00e676','#ff5252']
+        backgroundColor:['#00c853','#ff5252']
       }]
     }
   });
