@@ -70,7 +70,14 @@
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getAuth, signInWithEmailAndPassword } 
+import { getAuth, signInWithEmailAndPassword(auth, email.value, senha.value)
+  .then((userCredential) => {
+    console.log("Logado:", userCredential.user);
+    window.location.href = "dashboard.html";
+  })
+  .catch((error) => {
+    alert("Erro ao entrar: " + error.message);
+  }); } 
 from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
 const firebaseConfig = {
