@@ -2,117 +2,117 @@
 <html>
 <head>
   <title>FluxoZap 💸</title>
+
   <style>
     body {
       margin: 0;
-      font-family: 'Segoe UI', Arial;
+      font-family: 'Poppins', sans-serif;
       background: #0f0f0f;
       color: white;
     }
 
-    .topo {
+    .header {
       display: flex;
       justify-content: space-between;
-      padding: 15px;
-      background: #111;
+      padding: 20px;
+    }
+
+    .nome {
+      font-size: 18px;
+      color: #aaa;
+    }
+
+    .saldo-card {
+      background: linear-gradient(135deg, #00c853, #009624);
+      margin: 20px;
+      padding: 20px;
+      border-radius: 20px;
+      box-shadow: 0 0 20px rgba(0,0,0,0.5);
     }
 
     .saldo {
-      font-size: 22px;
+      font-size: 28px;
       font-weight: bold;
     }
 
-    .conta {
-      cursor: pointer;
-    }
-
-    .menu {
-      position: absolute;
-      right: 10px;
-      top: 60px;
-      background: #1a1a1a;
-      padding: 10px;
-      border-radius: 10px;
-      display: none;
-    }
-
-    .menu p {
-      margin: 5px 0;
-      cursor: pointer;
-    }
-
-    .extrato {
-      padding: 15px;
-    }
-
-    .botoes {
-      position: fixed;
-      bottom: 0;
-      width: 100%;
+    .acoes {
       display: flex;
+      gap: 10px;
+      padding: 0 20px;
     }
 
     .btn {
       flex: 1;
-      padding: 20px;
-      text-align: center;
-      font-size: 18px;
+      padding: 15px;
+      border-radius: 15px;
+      border: none;
+      font-size: 16px;
+      font-weight: bold;
       cursor: pointer;
     }
 
-    .entrada { background: green; }
-    .saida { background: red; }
-
-    input {
-      padding: 8px;
-      margin: 5px;
-      border-radius: 5px;
-      border: none;
+    .entrada {
+      background: #00c853;
     }
+
+    .saida {
+      background: #d50000;
+    }
+
+    .extrato {
+      padding: 20px;
+    }
+
+    .item {
+      background: #1c1c1c;
+      padding: 12px;
+      margin-bottom: 10px;
+      border-radius: 10px;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .entrada-cor { color: #00e676; }
+    .saida-cor { color: #ff5252; }
   </style>
 </head>
+
 <body>
 
-<div class="topo">
-  <div class="saldo">FluxoZap 💸<br>Saldo: R$ <span id="saldo">0.00</span></div>
-  <div class="conta" onclick="toggleMenu()">👤</div>
+<div class="header">
+  <div>
+    <div class="nome">Olá, usuário 👋</div>
+    <h2>FluxoZap 💸</h2>
+  </div>
+  <div>👤</div>
 </div>
 
-<div class="menu" id="menu">
-  <p onclick="logout()">Sair</p>
-  <p>Editar cadastro</p>
-  <p>Pagamento</p>
+<div class="saldo-card">
+  <div>Saldo disponível</div>
+  <div class="saldo">R$ <span id="saldo">0.00</span></div>
+</div>
+
+<div class="acoes">
+  <button class="btn entrada" onclick="entrada()">+ Recebi</button>
+  <button class="btn saida" onclick="saida()">- Gastei</button>
 </div>
 
 <div class="extrato">
   <h3>Extrato</h3>
-
-  <input type="date" id="dataInicio">
-  <input type="date" id="dataFim">
-  <button onclick="filtrar()">Filtrar</button>
-
   <div id="lista"></div>
-</div>
-
-<div class="botoes">
-  <div class="btn entrada" onclick="entrada()">Recebi</div>
-  <div class="btn saida" onclick="saida()">Gastei</div>
 </div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getFirestore, collection, addDoc, getDocs, query, where } 
 from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { getAuth, onAuthStateChanged, signOut } 
+import { getAuth, onAuthStateChanged } 
 from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyAh0Qi4lm-ZXQLe4YAca8wYbp5kcU6lY3I",
   authDomain: "fluxozap-10ead.firebaseapp.com",
   projectId: "fluxozap-10ead",
-  storageBucket: "fluxozap-10ead.firebasestorage.app",
-  messagingSenderId: "743375450552",
-  appId: "1:743375450552:web:48b85313fbc7fc30b29f4d"
 };
 
 const app = initializeApp(firebaseConfig);
@@ -121,7 +121,6 @@ const auth = getAuth(app);
 
 let saldo = 0;
 let userId = null;
-let dados = [];
 
 onAuthStateChanged(auth, (user) => {
   if (user) {
@@ -132,15 +131,6 @@ onAuthStateChanged(auth, (user) => {
   }
 });
 
-window.toggleMenu = function() {
-  let menu = document.getElementById("menu");
-  menu.style.display = menu.style.display === "block" ? "none" : "block";
-}
-
-window.logout = function() {
-  signOut(auth);
-}
-
 window.entrada = async function() {
   let valor = parseFloat(prompt("Valor recebido:"));
   if (!valor) return;
@@ -148,8 +138,7 @@ window.entrada = async function() {
   await addDoc(collection(db, "movimentos"), {
     tipo: "entrada",
     valor,
-    userId,
-    data: new Date().toISOString()
+    userId
   });
 
   carregar();
@@ -162,8 +151,7 @@ window.saida = async function() {
   await addDoc(collection(db, "movimentos"), {
     tipo: "saida",
     valor,
-    userId,
-    data: new Date().toISOString()
+    userId
   });
 
   carregar();
@@ -171,7 +159,6 @@ window.saida = async function() {
 
 async function carregar() {
   saldo = 0;
-  dados = [];
   let lista = document.getElementById("lista");
   lista.innerHTML = "";
 
@@ -180,36 +167,21 @@ async function carregar() {
 
   querySnapshot.forEach(doc => {
     let d = doc.data();
-    dados.push(d);
 
     if (d.tipo === "entrada") saldo += d.valor;
     else saldo -= d.valor;
+
+    lista.innerHTML += `
+      <div class="item">
+        <span>${d.tipo}</span>
+        <span class="${d.tipo === 'entrada' ? 'entrada-cor' : 'saida-cor'}">
+          R$ ${d.valor}
+        </span>
+      </div>
+    `;
   });
 
   document.getElementById("saldo").innerText = saldo.toFixed(2);
-
-  mostrar(dados);
-}
-
-function mostrar(listaDados) {
-  let lista = document.getElementById("lista");
-  lista.innerHTML = "";
-
-  listaDados.forEach(d => {
-    lista.innerHTML += `<p>${d.tipo} - R$ ${d.valor}</p>`;
-  });
-}
-
-window.filtrar = function() {
-  let ini = new Date(document.getElementById("dataInicio").value);
-  let fim = new Date(document.getElementById("dataFim").value);
-
-  let filtrado = dados.filter(d => {
-    let data = new Date(d.data);
-    return data >= ini && data <= fim;
-  });
-
-  mostrar(filtrado);
 }
 </script>
 
