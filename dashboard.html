@@ -5,105 +5,127 @@
 <title>FluxoZap</title>
 
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
-
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
-body {
-  margin: 0;
-  font-family: 'Inter', sans-serif;
-  background: #0d0d0d;
-  color: white;
+body{
+  margin:0;
+  font-family:'Inter',sans-serif;
+  background:#0a0a0a;
+  color:white;
 }
 
-.app {
-  padding: 20px;
+/* ocupa tela estilo app */
+.app{
+  max-width:480px;
+  margin:auto;
+  padding:20px;
 }
 
-/* TOPO */
-.topo {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+/* topo */
+.topo{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
 }
 
-.logo {
-  font-size: 20px;
-  font-weight: 600;
+.logo{
+  font-size:22px;
+  font-weight:600;
 }
 
-.perfil {
-  display: flex;
-  align-items: center;
-  gap: 10px;
+.perfil{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  cursor:pointer;
 }
 
-.perfil img {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
+.perfil img{
+  width:40px;
+  height:40px;
+  border-radius:50%;
 }
 
-/* SALDO */
-.card {
-  margin-top: 20px;
+/* menu */
+.menu{
+  position:absolute;
+  right:20px;
+  top:70px;
+  background:#1a1a1a;
+  border-radius:10px;
+  display:none;
 }
 
-.saldo {
-  font-size: 40px;
-  font-weight: bold;
+.menu div{
+  padding:12px;
+  cursor:pointer;
 }
 
-/* BOTÕES */
-.acoes {
-  display: flex;
-  gap: 10px;
-  margin-top: 20px;
+/* saldo */
+.saldo{
+  font-size:42px;
+  margin-top:20px;
+  font-weight:bold;
 }
 
-.btn {
-  flex: 1;
-  padding: 18px;
-  border-radius: 15px;
-  border: none;
-  font-size: 16px;
-  font-weight: bold;
+/* botoes */
+.acoes{
+  display:flex;
+  gap:10px;
+  margin-top:20px;
 }
 
-.recebi { background: #00c853; }
-.gastei { background: #d50000; }
-
-/* MODAL */
-.modal {
-  position: fixed;
-  bottom: 0;
-  width: 100%;
-  background: #111;
-  padding: 20px;
-  display: none;
+.btn{
+  flex:1;
+  padding:18px;
+  border-radius:15px;
+  border:none;
+  font-size:16px;
+  font-weight:bold;
 }
 
-input {
-  width: 100%;
-  padding: 15px;
-  margin-top: 10px;
-  border-radius: 10px;
-  border: none;
-  background: #222;
-  color: white;
+.recebi{background:#00c853;}
+.gastei{background:#d50000;}
+
+/* grafico */
+.grafico{
+  margin-top:30px;
+  text-align:center;
 }
 
-/* EXTRATO */
-.item {
-  background: #1a1a1a;
-  padding: 12px;
-  border-radius: 10px;
-  margin-top: 10px;
+/* porcentagem */
+.percentual{
+  margin-top:10px;
+  font-size:18px;
 }
 
-/* GRAFICO */
-.grafico {
-  margin-top: 30px;
+/* extrato */
+.item{
+  background:#1a1a1a;
+  padding:12px;
+  border-radius:10px;
+  margin-top:10px;
+}
+
+/* modal */
+.modal{
+  position:fixed;
+  bottom:0;
+  width:100%;
+  background:#111;
+  padding:20px;
+  display:none;
+}
+
+input{
+  width:100%;
+  padding:15px;
+  margin-top:10px;
+  border-radius:10px;
+  border:none;
+  background:#222;
+  color:white;
 }
 </style>
 </head>
@@ -114,15 +136,21 @@ input {
 
 <div class="topo">
   <div class="logo">FluxoZap</div>
-  <div class="perfil">
+
+  <div class="perfil" onclick="toggleMenu()">
     <span id="nomeUsuario"></span>
     <img id="foto" src="https://i.pravatar.cc/100">
   </div>
 </div>
 
-<div class="card">
-  <div>Saldo disponível</div>
-  <div class="saldo">R$ <span id="saldo">0.00</span></div>
+<div class="menu" id="menu">
+  <div onclick="logout()">Sair</div>
+  <div>Editar conta</div>
+  <div>Pagamento</div>
+</div>
+
+<div class="saldo">
+  R$ <span id="saldo">0.00</span>
 </div>
 
 <div class="acoes">
@@ -132,6 +160,7 @@ input {
 
 <div class="grafico">
   <canvas id="grafico"></canvas>
+  <div class="percentual" id="percentual"></div>
 </div>
 
 <div id="lista"></div>
@@ -147,7 +176,7 @@ input {
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getFirestore, collection, addDoc, getDocs, query, where } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyAh0Qi4lm-ZXQLe4YAca8wYbp5kcU6lY3I",
@@ -159,89 +188,97 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
 
-let userId = "";
-let tipoAtual = "";
+let userId="";
+let tipoAtual="";
 let chart;
 
-onAuthStateChanged(auth, async (user) => {
-  if (user) {
-    userId = user.uid;
-    document.getElementById("nomeUsuario").innerText = user.email;
+onAuthStateChanged(auth, (user)=>{
+  if(user){
+    userId=user.uid;
+    document.getElementById("nomeUsuario").innerText=user.email;
     carregar();
-  } else {
-    window.location.href = "index.html";
+  }else{
+    window.location.href="index.html";
   }
 });
 
-window.abrirModal = function(tipo) {
-  tipoAtual = tipo;
-  document.getElementById("modal").style.display = "block";
-  document.getElementById("titulo").innerText = tipo === "entrada" ? "Recebimento" : "Gasto";
+window.toggleMenu=function(){
+  let m=document.getElementById("menu");
+  m.style.display=m.style.display==="block"?"none":"block";
 }
 
-window.salvar = async function() {
-  let valor = parseFloat(document.getElementById("valor").value);
-  if (!valor) return;
+window.logout=function(){
+  signOut(auth);
+}
 
-  await addDoc(collection(db, "movimentos"), {
-    tipo: tipoAtual,
+window.abrirModal=function(tipo){
+  tipoAtual=tipo;
+  document.getElementById("modal").style.display="block";
+  document.getElementById("titulo").innerText=
+    tipo==="entrada"?"Recebimento":"Gasto";
+}
+
+window.salvar=async function(){
+  let valor=parseFloat(document.getElementById("valor").value);
+  if(!valor) return;
+
+  await addDoc(collection(db,"movimentos"),{
+    tipo:tipoAtual,
     valor,
-    data: new Date().toLocaleString(),
+    data:new Date().toLocaleString(),
     userId
   });
 
-  document.getElementById("modal").style.display = "none";
-  document.getElementById("valor").value = "";
+  document.getElementById("modal").style.display="none";
+  document.getElementById("valor").value="";
   carregar();
 }
 
-async function carregar() {
-  let saldo = 0;
-  let entrada = 0;
-  let saida = 0;
+async function carregar(){
+  let saldo=0,entrada=0,saida=0;
 
-  let lista = document.getElementById("lista");
-  lista.innerHTML = "";
+  let lista=document.getElementById("lista");
+  lista.innerHTML="";
 
-  const q = query(collection(db, "movimentos"), where("userId", "==", userId));
-  const docs = await getDocs(q);
+  const q=query(collection(db,"movimentos"),where("userId","==",userId));
+  const docs=await getDocs(q);
 
-  docs.forEach(doc => {
-    let d = doc.data();
+  docs.forEach(doc=>{
+    let d=doc.data();
 
-    if (d.tipo === "entrada") {
-      saldo += d.valor;
-      entrada += d.valor;
-    } else {
-      saldo -= d.valor;
-      saida += d.valor;
-    }
+    if(d.tipo==="entrada"){saldo+=d.valor;entrada+=d.valor;}
+    else{saldo-=d.valor;saida+=d.valor;}
 
-    lista.innerHTML += `
+    lista.innerHTML+=`
       <div class="item">
-        ${d.tipo === "entrada" ? "Entrada" : "Saída"} - ${d.data}
+        ${d.tipo==="entrada"?"Entrada":"Saída"} - ${d.data}
         <br>
-        <strong style="color:${d.tipo === "entrada" ? "#00e676" : "#ff5252"}">
-          R$ ${d.valor.toFixed(2)}
+        <strong style="color:${d.tipo==="entrada"?"#00e676":"#ff5252"}">
+        R$ ${d.valor.toFixed(2)}
         </strong>
       </div>
     `;
   });
 
-  document.getElementById("saldo").innerText = saldo.toFixed(2);
+  document.getElementById("saldo").innerText=saldo.toFixed(2);
 
-  // gráfico
-  const ctx = document.getElementById("grafico");
+  // porcentagem positiva
+  let total=entrada+saida;
+  let perc=total?((entrada/total)*100).toFixed(1):0;
+  document.getElementById("percentual").innerText=
+    "Positivo: "+perc+"%";
 
-  if (chart) chart.destroy();
+  // grafico
+  const ctx=document.getElementById("grafico");
+  if(chart) chart.destroy();
 
-  chart = new Chart(ctx, {
-    type: 'doughnut',
-    data: {
-      labels: ['Recebido', 'Gasto'],
-      datasets: [{
-        data: [entrada, saida],
-        backgroundColor: ['#00e676', '#ff5252']
+  chart=new Chart(ctx,{
+    type:'doughnut',
+    data:{
+      labels:['Recebido','Gasto'],
+      datasets:[{
+        data:[entrada,saida],
+        backgroundColor:['#00e676','#ff5252']
       }]
     }
   });
