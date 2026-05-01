@@ -22,6 +22,41 @@ body{
  align-items:center;
 }
 
+.user{
+ display:flex;
+ flex-direction:column;
+ align-items:center;
+}
+
+.foto-box{
+ position:relative;
+ width:60px;
+ height:60px;
+}
+
+.foto-box img{
+ width:60px;
+ height:60px;
+ border-radius:50%;
+ object-fit:cover;
+}
+
+.foto-box label{
+ position:absolute;
+ bottom:0;
+ right:0;
+ background:#00c853;
+ width:20px;
+ height:20px;
+ border-radius:50%;
+ display:flex;
+ justify-content:center;
+ align-items:center;
+ cursor:pointer;
+}
+
+.foto-box input{display:none;}
+
 .container{
  padding:15px;
  display:grid;
@@ -57,6 +92,8 @@ button{
 .red{background:#ff1744;}
 
 .item{border-bottom:1px solid #333;padding:5px;}
+
+canvas{height:120px !important;}
 </style>
 </head>
 
@@ -65,17 +102,29 @@ button{
 <div class="topo">
  <div>
   <div>Saldo: R$ <span id="saldoTotal">0</span></div>
+  <div>Hoje: R$ <span id="saldoDia">0</span></div>
+  <div>Mês: R$ <span id="saldoMes">0</span></div>
  </div>
- <div id="nomeUsuario"></div>
+
+ <div class="user">
+  <div class="foto-box">
+    <img id="fotoPerfil">
+    <label for="fotoInput">+</label>
+    <input type="file" id="fotoInput">
+  </div>
+  <div id="nomeUsuario"></div>
+ </div>
 </div>
 
 <div class="container">
 
 <div class="card">
- <input id="entradaValor" placeholder="Valor entrada">
- <button class="green" onclick="addEntrada()">Receber</button>
+ <h3>Receber</h3>
+ <input id="entradaValor">
+ <button class="green" onclick="addEntrada()">Adicionar</button>
 
- <input id="saidaValor" placeholder="Valor saída">
+ <h3>Gastar</h3>
+ <input id="saidaValor">
  <select id="categoria">
   <option>Alimentação</option>
   <option>Gasolina</option>
@@ -84,9 +133,12 @@ button{
   <option>Aluguel</option>
   <option>Funcionários</option>
   <option>Internet</option>
+  <option>Telefone</option>
+  <option>Cartão</option>
+  <option>Impostos</option>
   <option>Outros</option>
  </select>
- <button class="red" onclick="addSaida()">Gastar</button>
+ <button class="red" onclick="addSaida()">Adicionar</button>
 </div>
 
 <div class="card">
@@ -94,6 +146,7 @@ button{
 </div>
 
 <div class="card">
+ <h3>Extrato</h3>
  <div id="lista"></div>
 </div>
 
@@ -101,7 +154,7 @@ button{
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getFirestore, collection, addDoc, onSnapshot, query, where, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getFirestore, collection, addDoc, onSnapshot, query, where, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
 const app = initializeApp({
@@ -122,12 +175,20 @@ onAuthStateChanged(auth,async user=>{
  userId=user.uid;
 
  let docUser=await getDoc(doc(db,"usuarios",user.uid));
- let data=docUser.data();
+ let data=docUser.data()||{};
 
- empresaId=data.empresaId;
- nivel=data.nivel;
+ empresaId=data.empresaId||user.uid;
+ nivel=data.nivel||"admin";
+
+ if(!data.nome){
+  let nome=prompt("Digite seu nome:");
+  await setDoc(doc(db,"usuarios",user.uid),{nome},{merge:true});
+  data.nome=nome;
+ }
 
  nomeUsuario.innerText=data.nome;
+
+ if(data.foto) fotoPerfil.src=data.foto;
 
  carregar();
 });
@@ -142,15 +203,18 @@ function carregar(){
  }
 
  onSnapshot(q,(snap)=>{
-  let saldo=0;
-  let entrada=0;
-  let saida=0;
+  let saldo=0,entrada=0,saida=0;
+  let saldoDia=0,saldoMes=0;
 
   lista.innerHTML="";
+
+  let hoje=new Date().toDateString();
+  let mes=new Date().getMonth();
 
   snap.forEach(doc=>{
    let d=doc.data();
    let v=Number(d.valor)||0;
+   let data=new Date(d.data);
 
    if(d.tipo==="entrada"){
     saldo+=v; entrada+=v;
@@ -158,10 +222,20 @@ function carregar(){
     saldo-=v; saida+=v;
    }
 
-   lista.innerHTML+=`<div class="item">${d.tipo} - R$ ${v}</div>`;
+   if(data.toDateString()===hoje){
+    saldoDia += d.tipo==="entrada"?v:-v;
+   }
+
+   if(data.getMonth()===mes){
+    saldoMes += d.tipo==="entrada"?v:-v;
+   }
+
+   lista.innerHTML+=`<div class="item">${d.tipo} - R$ ${v} (${d.categoria||""})</div>`;
   });
 
   saldoTotal.innerText=saldo.toFixed(2);
+  saldoDia.innerText=saldoDia.toFixed(2);
+  saldoMes.innerText=saldoMes.toFixed(2);
 
   if(chart) chart.destroy();
 
@@ -171,7 +245,7 @@ function carregar(){
     labels:["Entrada","Saída"],
     datasets:[{
      data:[entrada,saida],
-     backgroundColor:["green","red"]
+     backgroundColor:["#00c853","#ff1744"]
     }]
    }
   });
@@ -179,9 +253,12 @@ function carregar(){
 }
 
 window.addEntrada=async()=>{
+ let v=Number(entradaValor.value);
+ if(!v) return alert("Digite valor");
+
  await addDoc(collection(db,"movimentos"),{
   tipo:"entrada",
-  valor:Number(entradaValor.value),
+  valor:v,
   empresaId,
   userId,
   data:new Date().toISOString()
@@ -189,14 +266,35 @@ window.addEntrada=async()=>{
 }
 
 window.addSaida=async()=>{
+ let v=Number(saidaValor.value);
+ if(!v) return alert("Digite valor");
+
  await addDoc(collection(db,"movimentos"),{
   tipo:"saida",
-  valor:Number(saidaValor.value),
+  valor:v,
   categoria:categoria.value,
   empresaId,
   userId,
   data:new Date().toISOString()
  });
+}
+
+// FOTO SEM STORAGE
+fotoInput.onchange=async()=>{
+ let file=fotoInput.files[0];
+ const reader=new FileReader();
+
+ reader.onload=async e=>{
+  let base64=e.target.result;
+
+  await setDoc(doc(db,"usuarios",auth.currentUser.uid),{
+   foto:base64
+  },{merge:true});
+
+  fotoPerfil.src=base64;
+ }
+
+ reader.readAsDataURL(file);
 }
 </script>
 
