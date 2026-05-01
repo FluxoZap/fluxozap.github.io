@@ -15,30 +15,26 @@ body{
   color:white;
 }
 
-/* ===== DESKTOP ===== */
 .container{
   display:flex;
   height:100vh;
 }
 
-/* MENU LATERAL */
 .sidebar{
-  width:240px;
+  width:220px;
   background:#15171c;
   padding:20px;
 }
 
 .sidebar h2{
-  font-size:20px;
+  margin:0;
 }
 
 .sidebar div{
-  margin-top:15px;
+  margin-top:20px;
   color:#aaa;
-  cursor:pointer;
 }
 
-/* MAIN DESKTOP */
 .main{
   flex:1;
   padding:20px;
@@ -47,26 +43,24 @@ body{
   gap:20px;
 }
 
-/* BLOCO */
 .bloco{
   background:#1a1d23;
-  padding:18px;
+  padding:20px;
   border-radius:15px;
 }
 
-/* SALDO */
 .saldo{
-  font-size:40px;
+  font-size:38px;
   font-weight:bold;
 }
 
-/* INPUTS */
 input{
   padding:12px;
   border-radius:10px;
   border:none;
   background:#2a2d35;
   color:white;
+  margin-top:10px;
 }
 
 button{
@@ -74,13 +68,13 @@ button{
   border:none;
   border-radius:10px;
   font-weight:bold;
+  margin-top:10px;
   cursor:pointer;
 }
 
 .recebi{background:#00c853;}
 .gastei{background:#d50000;}
 
-/* ALERTA */
 .alerta{
   background:#ff1744;
   padding:10px;
@@ -89,47 +83,14 @@ button{
   display:none;
 }
 
-/* EXTRATO */
 .item{
   margin-top:10px;
-  font-size:14px;
 }
 
-/* GRAFICO */
-canvas{
-  max-height:200px;
-}
-
-/* ===== MOBILE ===== */
-@media (max-width: 900px){
-
-.container{
-  flex-direction:column;
-}
-
-/* menu vira topo */
-.sidebar{
-  width:100%;
-  display:flex;
-  justify-content:space-around;
-  padding:15px;
-}
-
-/* vira 1 coluna */
-.main{
-  grid-template-columns:1fr;
-}
-
-/* botões maiores estilo app */
-button{
-  width:100%;
-  margin-top:5px;
-}
-
-input{
-  width:100%;
-  margin-top:5px;
-}
+@media(max-width:900px){
+  .container{flex-direction:column;}
+  .sidebar{width:100%;display:flex;justify-content:space-around;}
+  .main{grid-template-columns:1fr;}
 }
 </style>
 </head>
@@ -138,7 +99,6 @@ input{
 
 <div class="container">
 
-<!-- MENU -->
 <div class="sidebar">
   <h2>FluxoZap</h2>
   <div>Dashboard</div>
@@ -146,43 +106,25 @@ input{
   <div>Conta</div>
 </div>
 
-<!-- CONTEÚDO -->
 <div class="main">
 
 <!-- SALDO -->
 <div class="bloco">
   <div>Saldo Total</div>
   <div class="saldo">R$ <span id="saldo">0.00</span></div>
-  <div id="alerta" class="alerta">⚠️ Você já gastou 75% do seu saldo!</div>
+  <div id="alerta" class="alerta">⚠️ Você já gastou 75%!</div>
 </div>
 
-<!-- CONTA -->
-<div class="bloco">
-  <div id="nomeUsuario">Usuário</div>
-  <small>Conta</small>
-</div>
-
-<!-- MOVIMENTOS -->
-<div class="bloco">
-  <h3>Recebimento</h3>
-  <input id="entradaValor" type="number" placeholder="Valor recebido">
-  <button class="recebi" onclick="addEntrada()">Receber</button>
-
-  <h3 style="margin-top:15px;">Gasto</h3>
-  <input id="saidaValor" type="number" placeholder="Valor gasto">
-  <button class="gastei" onclick="addSaida()">Gastar</button>
-</div>
-
-<!-- GRAFICO + EXTRATO -->
+<!-- ORÇAMENTO -->
 <div class="bloco">
   <h3>Orçamento mensal</h3>
 
-  <input id="orcamentoInput" type="number" placeholder="Definir orçamento mensal">
+  <input id="orcamentoInput" type="number" placeholder="Definir orçamento">
   <button onclick="salvarOrcamento()" class="recebi">Salvar</button>
 
-  <div style="margin-top:15px;">
-    <div>Usado: R$ <span id="usado">0</span></div>
-    <div>Restante: R$ <span id="restante">0</span></div>
+  <div style="margin-top:10px;">
+    Usado: R$ <span id="usado">0</span><br>
+    Restante: R$ <span id="restante">0</span>
   </div>
 
   <div style="background:#333;height:10px;border-radius:10px;margin-top:10px;">
@@ -191,6 +133,19 @@ input{
 
   <small id="alertaOrcamento"></small>
 </div>
+
+<!-- MOVIMENTOS -->
+<div class="bloco">
+  <input id="entradaValor" type="number" placeholder="Valor recebido">
+  <button class="recebi" onclick="addEntrada()">Receber</button>
+
+  <input id="saidaValor" type="number" placeholder="Valor gasto">
+  <button class="gastei" onclick="addSaida()">Gastar</button>
+</div>
+
+<!-- GRAFICO + EXTRATO -->
+<div class="bloco">
+  <canvas id="grafico"></canvas>
   <div id="percentual"></div>
   <hr style="border-color:#333;">
   <div id="lista"></div>
@@ -216,16 +171,28 @@ const auth = getAuth(app);
 
 let userId="";
 let chart;
+let orcamento=0;
 
 onAuthStateChanged(auth,(user)=>{
   if(user){
     userId=user.uid;
-    document.getElementById("nomeUsuario").innerText=user.email;
     carregar();
   }else{
     window.location.href="index.html";
   }
 });
+
+window.salvarOrcamento=async function(){
+  let v=parseFloat(document.getElementById("orcamentoInput").value);
+  if(!v) return;
+
+  await addDoc(collection(db,"configuracao"),{
+    userId,
+    orcamentoMensal:v
+  });
+
+  carregar();
+}
 
 window.addEntrada=async function(){
   let v=parseFloat(document.getElementById("entradaValor").value);
@@ -275,7 +242,7 @@ async function carregar(){
         ${d.tipo==="entrada"?"Entrada":"Saída"} - ${new Date(d.data).toLocaleString()}
         <br>
         <strong style="color:${d.tipo==="entrada"?"#00e676":"#ff5252"}">
-          R$ ${d.valor.toFixed(2)}
+        R$ ${d.valor.toFixed(2)}
         </strong>
       </div>
     `;
@@ -283,14 +250,39 @@ async function carregar(){
 
   document.getElementById("saldo").innerText=saldo.toFixed(2);
 
-  let alerta=document.getElementById("alerta");
-  let percGasto=entrada? (saida/entrada)*100 : 0;
-  alerta.style.display = percGasto>=75 ? "block":"none";
+  // ALERTA GASTO
+  let percGasto=entrada? (saida/entrada)*100:0;
+  document.getElementById("alerta").style.display =
+    percGasto>=75 ? "block":"none";
 
-  let total=entrada+saida;
-  let perc=total?((entrada/total)*100).toFixed(1):0;
-  document.getElementById("percentual").innerText="Positivo: "+perc+"%";
+  // ORÇAMENTO
+  const q2=query(collection(db,"configuracao"),where("userId","==",userId));
+  const snap=await getDocs(q2);
 
+  snap.forEach(doc=>{
+    orcamento=doc.data().orcamentoMensal;
+  });
+
+  let restante=orcamento-saida;
+  let perc=orcamento? (saida/orcamento)*100:0;
+
+  document.getElementById("usado").innerText=saida.toFixed(2);
+  document.getElementById("restante").innerText=restante.toFixed(2);
+  document.getElementById("barra").style.width=perc+"%";
+
+  let alertaOrc=document.getElementById("alertaOrcamento");
+
+  if(perc>=100){
+    alertaOrc.innerText="⚠️ Orçamento ultrapassado!";
+    alertaOrc.style.color="red";
+  }else if(perc>=75){
+    alertaOrc.innerText="⚠️ 75% do orçamento usado";
+    alertaOrc.style.color="orange";
+  }else{
+    alertaOrc.innerText="";
+  }
+
+  // GRAFICO
   const ctx=document.getElementById("grafico");
   if(chart) chart.destroy();
 
