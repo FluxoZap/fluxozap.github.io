@@ -48,7 +48,7 @@ button{
 <body>
 
 <div class="box">
-<h2>FluxoZap</h2>
+<h2>FluxoZap 💳</h2>
 
 <input id="email" placeholder="Email">
 <input id="senha" type="password" placeholder="Senha">
@@ -84,17 +84,17 @@ const auth=getAuth(app);
 const db=getFirestore(app);
 
 window.cadastrar = async()=>{
- let email=email.value;
- let senha=senha.value;
- let tipo=tipoConta.value;
- let nivel=nivel.value;
+ let user = await createUserWithEmailAndPassword(auth,email.value,senha.value);
 
- let user = await createUserWithEmailAndPassword(auth,email,senha);
+ let empresaId = tipoConta.value==="empresa"
+   ? (nivel.value==="admin" ? user.user.uid : prompt("Digite o ID da empresa"))
+   : user.user.uid;
 
  await setDoc(doc(db,"usuarios",user.user.uid),{
-  email,
-  tipo,
-  nivel
+  email:email.value,
+  tipo:tipoConta.value,
+  nivel:nivel.value,
+  empresaId
  });
 
  alert("Conta criada!");
