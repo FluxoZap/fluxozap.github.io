@@ -54,19 +54,8 @@ button{
 <input id="email" placeholder="Email">
 <input id="senha" type="password" placeholder="Senha">
 
-<select id="tipoConta">
-<option value="pessoal">Conta pessoal</option>
-<option value="empresa">Controle de caixa</option>
-</select>
-
-<select id="nivel">
-<option value="admin">Administrador</option>
-<option value="funcionario">Funcionário</option>
-</select>
-
 <button onclick="cadastrar()">Criar conta</button>
 <button onclick="login()">Entrar</button>
-
 </div>
 
 <script type="module">
@@ -86,16 +75,10 @@ const db = getFirestore(app);
 window.cadastrar = async()=>{
  let user = await createUserWithEmailAndPassword(auth,email.value,senha.value);
 
- let empresaId = tipoConta.value==="empresa"
-   ? (nivel.value==="admin" ? user.user.uid : prompt("ID da empresa"))
-   : user.user.uid;
-
  await setDoc(doc(db,"usuarios",user.user.uid),{
   nome:nome.value,
   email:email.value,
-  tipo:tipoConta.value,
-  nivel:nivel.value,
-  empresaId
+  empresaId:user.user.uid
  });
 
  alert("Conta criada!");
