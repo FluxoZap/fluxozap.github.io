@@ -5,115 +5,82 @@
 <title>FluxoZap</title>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
 <style>
 body{
-  margin:0;
-  font-family: 'Inter', sans-serif;
-  background:#0f0f14;
-  color:white;
+ background:#0f0f14;
+ color:white;
+ font-family:Arial;
+ margin:0;
 }
 
 .topo{
-  padding:20px;
-  background:linear-gradient(135deg,#6a00ff,#8e2de2);
-}
-
-.saldo{
-  font-size:32px;
-  font-weight:bold;
+ background:#6a00ff;
+ padding:20px;
 }
 
 .container{
-  padding:15px;
-  display:grid;
-  gap:15px;
+ padding:15px;
+ display:grid;
+ gap:15px;
 }
 
 .card{
-  background:#1c1c25;
-  padding:15px;
-  border-radius:15px;
+ background:#1c1c25;
+ padding:15px;
+ border-radius:15px;
 }
 
-input,select{
-  width:100%;
-  padding:12px;
-  margin-top:8px;
-  background:#2a2a35;
-  border:none;
-  border-radius:10px;
-  color:white;
+input{
+ width:100%;
+ padding:10px;
+ margin-top:10px;
+ background:#2a2a35;
+ border:none;
+ border-radius:8px;
+ color:white;
 }
 
 button{
-  width:100%;
-  padding:12px;
-  margin-top:10px;
-  border:none;
-  border-radius:10px;
-  font-weight:bold;
+ width:100%;
+ padding:10px;
+ margin-top:10px;
+ border:none;
+ border-radius:8px;
+ font-weight:bold;
 }
 
 .green{background:#00c853;}
 .red{background:#ff1744;}
-.gray{background:#333;}
-
-.item{
-  border-bottom:1px solid #333;
-  padding:5px 0;
-}
-
-canvas{max-height:200px;}
 </style>
 </head>
 
 <body>
 
 <div class="topo">
-  <div id="usuario"></div>
-  <div class="saldo">R$ <span id="saldoTotal">0</span></div>
-  <div>Hoje: R$ <span id="saldoDia">0</span></div>
+<h2 id="usuario"></h2>
+<h1>R$ <span id="saldo">0</span></h1>
 </div>
 
 <div class="container">
 
 <div class="card">
-  <h3>💰 Caixa do Dia (Lanchonete)</h3>
+<h3>Entrada</h3>
+<input id="entrada">
+<button class="green" onclick="addEntrada()">Adicionar</button>
 
-  <input id="entradaValor" placeholder="Valor recebido">
-  <button class="green" onclick="addEntrada()">Registrar venda</button>
-
-  <input id="saidaValor" placeholder="Gasto do dia">
-  <button class="red" onclick="addSaida()">Registrar gasto</button>
+<h3>Saída</h3>
+<input id="saida">
+<button class="red" onclick="addSaida()">Adicionar</button>
 </div>
 
 <div class="card">
-  <h3>📊 Gráfico</h3>
-  <canvas id="grafico"></canvas>
+<canvas id="grafico"></canvas>
 </div>
 
 <div class="card">
-  <h3>🎯 Meta mensal</h3>
-  <input id="metaValor">
-  <button onclick="salvarMeta()">Salvar</button>
-
-  <p>Usado: R$ <span id="usado">0</span></p>
-  <p>Restante: R$ <span id="restante">0</span></p>
-</div>
-
-<div class="card">
-  <h3>📅 Filtro</h3>
-  <input type="date" id="dataInicio">
-  <input type="date" id="dataFim">
-  <button class="gray" onclick="filtrar()">Filtrar</button>
-  <button class="gray" onclick="gerarPDF()">PDF</button>
-</div>
-
-<div class="card">
-  <h3>📄 Extrato</h3>
-  <div id="lista"></div>
+<h3>Extrato</h3>
+<div id="lista"></div>
 </div>
 
 </div>
@@ -134,18 +101,15 @@ const db=getFirestore(app);
 const auth=getAuth(app);
 
 let chart;
-let dados=[];
 
 onAuthStateChanged(auth,user=>{
  if(user){
   usuario.innerText=user.email;
-  iniciar(user.uid);
- }else{
-  window.location.href="index.html";
+  carregar(user.uid);
  }
 });
 
-function iniciar(uid){
+function carregar(uid){
  const q=query(collection(db,"movimentos"),where("userId","==",uid));
 
  onSnapshot(q,(snapshot)=>{
@@ -153,71 +117,50 @@ function iniciar(uid){
   let saldo=0;
   let entrada=0;
   let saida=0;
-  let saldoDia=0;
 
-  dados=[];
   lista.innerHTML="";
-
-  let hoje=new Date().toDateString();
 
   snapshot.forEach(doc=>{
    let d=doc.data();
-   let data=new Date(d.data);
+   let valor = Number(d.valor) || 0;
 
-   dados.push(d);
-
-   if(d.tipo==="Entrada"){
-    saldo += d.valor;
-    entrada += d.valor;
+   if(d.tipo==="entrada"){
+    saldo += valor;
+    entrada += valor;
    }else{
-    saldo -= d.valor;
-    saida += d.valor;
+    saldo -= valor;
+    saida += valor;
    }
 
-   if(data.toDateString()===hoje){
-    saldoDia += d.tipo==="Entrada"?d.valor:-d.valor;
-   }
-
-   lista.innerHTML += `
-   <div class="item">
-    ${d.tipo} - R$ ${d.valor}
-   </div>`;
+   lista.innerHTML += `<div>${d.tipo} R$ ${valor}</div>`;
   });
 
-  saldoTotal.innerText = saldo;
-  saldoDia.innerText = saldoDia;
+  document.getElementById("saldo").innerText = saldo;
 
   atualizarGrafico(entrada,saida);
-  atualizarMeta(saida);
  });
 }
 
 window.addEntrada = async()=>{
- let v=parseFloat(entradaValor.value);
- if(!v) return;
+ let v=Number(document.getElementById("entrada").value);
 
  await addDoc(collection(db,"movimentos"),{
-  tipo:"Entrada",
+  tipo:"entrada",
   valor:v,
-  data:new Date().toISOString(),
+  data:new Date(),
   userId:auth.currentUser.uid
  });
-
- entradaValor.value="";
 }
 
 window.addSaida = async()=>{
- let v=parseFloat(saidaValor.value);
- if(!v) return;
+ let v=Number(document.getElementById("saida").value);
 
  await addDoc(collection(db,"movimentos"),{
-  tipo:"Saída",
+  tipo:"saida",
   valor:v,
-  data:new Date().toISOString(),
+  data:new Date(),
   userId:auth.currentUser.uid
  });
-
- saidaValor.value="";
 }
 
 function atualizarGrafico(ent, sai){
@@ -228,54 +171,13 @@ function atualizarGrafico(ent, sai){
  chart=new Chart(ctx,{
   type:"doughnut",
   data:{
-   labels:["Entradas","Saídas"],
+   labels:["Entrada","Saída"],
    datasets:[{
     data:[ent,sai],
-    backgroundColor:["#00c853","#ff1744"]
+    backgroundColor:["green","red"]
    }]
   }
  });
-}
-
-window.salvarMeta=()=>{
- localStorage.setItem("meta",metaValor.value);
-}
-
-function atualizarMeta(gasto){
- let meta=parseFloat(localStorage.getItem("meta"))||0;
-
- usado.innerText=gasto;
- restante.innerText=meta-gasto;
-
- if(meta>0 && gasto>=meta*0.75){
-  alert("⚠️ Você gastou 75% da meta");
- }
-}
-
-window.filtrar=()=>{
- lista.innerHTML="";
- let i=new Date(dataInicio.value);
- let f=new Date(dataFim.value);
-
- dados.forEach(d=>{
-  let dt=new Date(d.data);
-  if(dt>=i && dt<=f){
-   lista.innerHTML += `<div>${d.tipo} - R$ ${d.valor}</div>`;
-  }
- });
-}
-
-window.gerarPDF=()=>{
- const { jsPDF } = window.jspdf;
- const doc = new jsPDF();
-
- let y=10;
- dados.forEach(d=>{
-  doc.text(`${d.tipo} - R$ ${d.valor}`,10,y);
-  y+=10;
- });
-
- doc.save("extrato.pdf");
 }
 </script>
 
