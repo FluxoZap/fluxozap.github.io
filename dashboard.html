@@ -15,7 +15,7 @@ body{
   color:white;
 }
 
-/* GRID PRINCIPAL */
+/* GRID */
 .container{
   display:grid;
   grid-template-columns:1fr 1fr;
@@ -23,14 +23,17 @@ body{
   padding:20px;
 }
 
-/* BLOCO */
 .bloco{
   background:#15171c;
   padding:20px;
   border-radius:15px;
+  transition:0.2s;
 }
 
-/* SALDO */
+.bloco:hover{
+  transform:translateY(-5px);
+}
+
 .saldo{
   font-size:40px;
   font-weight:700;
@@ -54,6 +57,12 @@ button{
   border:none;
   border-radius:10px;
   font-weight:bold;
+  cursor:pointer;
+  transition:0.2s;
+}
+
+button:active{
+  transform:scale(0.95);
 }
 
 .recebi{background:#00c853;}
@@ -71,6 +80,7 @@ button{
   height:10px;
   background:#00c853;
   border-radius:10px;
+  transition:0.5s;
 }
 
 /* GRAFICOS */
@@ -82,6 +92,23 @@ button{
 canvas{
   width:100% !important;
   max-height:200px;
+}
+
+/* TOAST */
+.toast{
+  position:fixed;
+  bottom:20px;
+  left:50%;
+  transform:translateX(-50%);
+  background:#00c853;
+  padding:12px 20px;
+  border-radius:10px;
+  opacity:0;
+  transition:0.3s;
+}
+
+.toast.show{
+  opacity:1;
 }
 
 /* MOBILE */
@@ -96,19 +123,15 @@ canvas{
 
 <div class="container">
 
-<!-- SALDO -->
 <div class="bloco">
   <div>Saldo Total</div>
   <div class="saldo">R$ <span id="saldo">0</span></div>
 </div>
 
-<!-- CONTA -->
 <div class="bloco">
   <div id="nome">Usuário</div>
-  <small>Conta</small>
 </div>
 
-<!-- MOVIMENTOS -->
 <div class="bloco">
   <h3>Receber</h3>
   <input id="entradaValor" type="number">
@@ -126,7 +149,6 @@ canvas{
   <button class="gastei" onclick="addSaida()">Adicionar</button>
 </div>
 
-<!-- ORÇAMENTO -->
 <div class="bloco">
   <h3>Orçamento mensal</h3>
   <input id="orcamentoInput" type="number">
@@ -142,19 +164,19 @@ canvas{
   <small id="alerta"></small>
 </div>
 
-<!-- GRAFICOS -->
 <div class="bloco graficos">
   <canvas id="grafico1"></canvas>
   <canvas id="grafico2"></canvas>
 </div>
 
-<!-- EXTRATO -->
 <div class="bloco">
   <h3>Extrato</h3>
   <div id="lista"></div>
 </div>
 
 </div>
+
+<div id="toast" class="toast">OK</div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
@@ -175,6 +197,13 @@ let userId="";
 let chart1,chart2;
 let orcamento=0;
 
+function toast(msg){
+  let t=document.getElementById("toast");
+  t.innerText=msg;
+  t.classList.add("show");
+  setTimeout(()=>t.classList.remove("show"),2000);
+}
+
 onAuthStateChanged(auth,user=>{
   if(user){
     userId=user.uid;
@@ -193,6 +222,8 @@ window.addEntrada=async()=>{
     tipo:"entrada",valor:v,data:new Date().toISOString(),userId
   });
 
+  toast("Entrada adicionada");
+  entradaValor.value="";
   carregar();
 }
 
@@ -205,6 +236,8 @@ window.addSaida=async()=>{
     tipo:"saida",valor:v,categoria:cat,data:new Date().toISOString(),userId
   });
 
+  toast("Gasto registrado");
+  saidaValor.value="";
   carregar();
 }
 
@@ -216,6 +249,7 @@ window.salvarOrcamento=async()=>{
     userId,orcamentoMensal:v
   });
 
+  toast("Orçamento salvo");
   carregar();
 }
 
@@ -250,7 +284,6 @@ async function carregar(){
 
   saldoEl.innerText=saldo;
 
-  // orçamento
   const q2=query(collection(db,"configuracao"),where("userId","==",userId));
   const snap=await getDocs(q2);
 
@@ -262,25 +295,25 @@ async function carregar(){
   restante.innerText=orcamento-saida;
   barra.style.width=perc+"%";
 
-  if(perc>=100) alerta.innerText="Estourou orçamento!";
+  if(perc>=100) alerta.innerText="Estourou!";
   else if(perc>=75) alerta.innerText="75% usado";
   else alerta.innerText="";
 
-  // gráfico 1
   if(chart1) chart1.destroy();
   chart1=new Chart(grafico1,{
     type:"doughnut",
-    data:{labels:["Recebido","Gasto"],datasets:[{data:[entrada,saida]}]}
+    data:{labels:["Recebido","Gasto"],datasets:[{data:[entrada,saida]}]},
+    options:{animation:{duration:800}}
   });
 
-  // gráfico 2
   if(chart2) chart2.destroy();
   chart2=new Chart(grafico2,{
     type:"doughnut",
     data:{
       labels:Object.keys(categorias),
       datasets:[{data:Object.values(categorias)}]
-    }
+    },
+    options:{animation:{duration:800}}
   });
 }
 </script>
