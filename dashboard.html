@@ -15,7 +15,6 @@ body{
   color:white;
 }
 
-/* GRID */
 .container{
   display:grid;
   grid-template-columns:1fr 1fr;
@@ -39,7 +38,6 @@ body{
   font-weight:700;
 }
 
-/* INPUT */
 input,select{
   width:100%;
   padding:12px;
@@ -58,17 +56,11 @@ button{
   border-radius:10px;
   font-weight:bold;
   cursor:pointer;
-  transition:0.2s;
-}
-
-button:active{
-  transform:scale(0.95);
 }
 
 .recebi{background:#00c853;}
 .gastei{background:#ff1744;}
 
-/* BARRA */
 .barra{
   height:10px;
   background:#333;
@@ -83,38 +75,12 @@ button:active{
   transition:0.5s;
 }
 
-/* GRAFICOS */
-.graficos{
-  display:flex;
-  gap:10px;
-}
-
 canvas{
-  width:100% !important;
-  max-height:200px;
+  max-height:220px;
 }
 
-/* TOAST */
-.toast{
-  position:fixed;
-  bottom:20px;
-  left:50%;
-  transform:translateX(-50%);
-  background:#00c853;
-  padding:12px 20px;
-  border-radius:10px;
-  opacity:0;
-  transition:0.3s;
-}
-
-.toast.show{
-  opacity:1;
-}
-
-/* MOBILE */
 @media(max-width:900px){
   .container{grid-template-columns:1fr;}
-  .graficos{flex-direction:column;}
 }
 </style>
 </head>
@@ -164,9 +130,8 @@ canvas{
   <small id="alerta"></small>
 </div>
 
-<div class="bloco graficos">
-  <canvas id="grafico1"></canvas>
-  <canvas id="grafico2"></canvas>
+<div class="bloco">
+  <canvas id="grafico"></canvas>
 </div>
 
 <div class="bloco">
@@ -175,8 +140,6 @@ canvas{
 </div>
 
 </div>
-
-<div id="toast" class="toast">OK</div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
@@ -194,15 +157,7 @@ const db=getFirestore(app);
 const auth=getAuth(app);
 
 let userId="";
-let chart1,chart2;
-let orcamento=0;
-
-function toast(msg){
-  let t=document.getElementById("toast");
-  t.innerText=msg;
-  t.classList.add("show");
-  setTimeout(()=>t.classList.remove("show"),2000);
-}
+let chart;
 
 onAuthStateChanged(auth,user=>{
   if(user){
@@ -222,7 +177,6 @@ window.addEntrada=async()=>{
     tipo:"entrada",valor:v,data:new Date().toISOString(),userId
   });
 
-  toast("Entrada adicionada");
   entradaValor.value="";
   carregar();
 }
@@ -236,7 +190,6 @@ window.addSaida=async()=>{
     tipo:"saida",valor:v,categoria:cat,data:new Date().toISOString(),userId
   });
 
-  toast("Gasto registrado");
   saidaValor.value="";
   carregar();
 }
@@ -249,14 +202,12 @@ window.salvarOrcamento=async()=>{
     userId,orcamentoMensal:v
   });
 
-  toast("Orçamento salvo");
   carregar();
 }
 
 async function carregar(){
 
   let saldo=0,entrada=0,saida=0;
-  let categorias={};
 
   lista.innerHTML="";
 
@@ -267,16 +218,11 @@ async function carregar(){
     let d=doc.data();
 
     if(d.tipo==="entrada"){saldo+=d.valor;entrada+=d.valor;}
-    else{
-      saldo-=d.valor;saida+=d.valor;
-
-      if(!categorias[d.categoria]) categorias[d.categoria]=0;
-      categorias[d.categoria]+=d.valor;
-    }
+    else{saldo-=d.valor;saida+=d.valor;}
 
     lista.innerHTML+=`
       <div>
-        ${d.tipo==="entrada"?"Entrada":"Saída"} - ${d.categoria||""}
+        ${d.tipo==="entrada"?"Entrada":"Saída"}
         <br>R$ ${d.valor}
       </div>
     `;
@@ -284,36 +230,17 @@ async function carregar(){
 
   saldoEl.innerText=saldo;
 
-  const q2=query(collection(db,"configuracao"),where("userId","==",userId));
-  const snap=await getDocs(q2);
+  if(chart) chart.destroy();
 
-  snap.forEach(doc=>orcamento=doc.data().orcamentoMensal);
-
-  let perc=orcamento?(saida/orcamento)*100:0;
-
-  usado.innerText=saida;
-  restante.innerText=orcamento-saida;
-  barra.style.width=perc+"%";
-
-  if(perc>=100) alerta.innerText="Estourou!";
-  else if(perc>=75) alerta.innerText="75% usado";
-  else alerta.innerText="";
-
-  if(chart1) chart1.destroy();
-  chart1=new Chart(grafico1,{
-    type:"doughnut",
-    data:{labels:["Recebido","Gasto"],datasets:[{data:[entrada,saida]}]},
-    options:{animation:{duration:800}}
-  });
-
-  if(chart2) chart2.destroy();
-  chart2=new Chart(grafico2,{
+  chart=new Chart(grafico,{
     type:"doughnut",
     data:{
-      labels:Object.keys(categorias),
-      datasets:[{data:Object.values(categorias)}]
-    },
-    options:{animation:{duration:800}}
+      labels:["Recebido","Gasto"],
+      datasets:[{
+        data:[entrada,saida],
+        backgroundColor:["#00c853","#ff1744"]
+      }]
+    }
   });
 }
 </script>
