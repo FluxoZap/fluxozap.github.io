@@ -4,16 +4,12 @@
 <meta charset="UTF-8">
 <title>FluxoZap</title>
 
-<link rel="manifest" href="manifest.json">
-
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
 <style>
 body{
   margin:0;
-  font-family:Inter;
+  font-family:Arial;
   background:#0b0c10;
   color:white;
 }
@@ -25,38 +21,37 @@ body{
   padding:20px;
 }
 
-.bloco{
+.card{
   background:#15171c;
   padding:20px;
   border-radius:15px;
 }
 
-.saldo{
-  font-size:40px;
-}
+h2{margin:0}
 
 input,select{
   width:100%;
-  padding:12px;
+  padding:10px;
   margin-top:10px;
   background:#222;
   border:none;
-  border-radius:10px;
+  border-radius:8px;
   color:white;
 }
 
 button{
   width:100%;
-  padding:12px;
+  padding:10px;
   margin-top:10px;
   border:none;
-  border-radius:10px;
+  border-radius:8px;
+  font-weight:bold;
 }
 
-.recebi{background:#00c853;}
-.gastei{background:#ff1744;}
+.green{background:#00c853;}
+.red{background:#ff1744;}
 
-canvas{max-height:250px;}
+canvas{max-height:200px;}
 </style>
 </head>
 
@@ -64,69 +59,74 @@ canvas{max-height:250px;}
 
 <div class="container">
 
-<div class="bloco">
-Saldo Total
-<div class="saldo">R$ <span id="saldo">0</span></div>
+<div class="card">
+  <h2>Saldo Total</h2>
+  <h1 id="saldoTotal">R$ 0</h1>
+
+  <h3>Hoje: R$ <span id="saldoDia">0</span></h3>
+  <h3>Mês: R$ <span id="saldoMes">0</span></h3>
 </div>
 
-<div class="bloco" id="nome"></div>
-
-<div class="bloco">
-Receber
-<input id="entradaValor">
-<button class="recebi" onclick="addEntrada()">Adicionar</button>
-
-Gastar
-<input id="saidaValor">
-<select id="categoria">
-<option>Alimentação</option>
-<option>Transporte</option>
-<option>Contas</option>
-</select>
-<button class="gastei" onclick="addSaida()">Adicionar</button>
+<div class="card">
+  <h3 id="usuario"></h3>
 </div>
 
-<div class="bloco">
-Filtro
-<input type="date" id="dataInicio">
-<input type="date" id="dataFim">
-<button onclick="filtrar()">Filtrar</button>
-<button onclick="pdf()">PDF</button>
+<div class="card">
+  <h3>Receber</h3>
+  <input id="entradaValor" type="number">
+  <button class="green" onclick="addEntrada()">Adicionar</button>
+
+  <h3>Gastar</h3>
+  <input id="saidaValor" type="number">
+  <select id="categoria">
+    <option>Alimentação</option>
+    <option>Transporte</option>
+    <option>Contas</option>
+  </select>
+  <button class="red" onclick="addSaida()">Adicionar</button>
 </div>
 
-<div class="bloco">
-<canvas id="grafico"></canvas>
+<div class="card">
+  <h3>Meta mensal</h3>
+  <input id="metaValor" placeholder="Digite meta">
+  <button onclick="salvarMeta()">Salvar</button>
+
+  <p>Usado: R$ <span id="usado">0</span></p>
+  <p>Restante: R$ <span id="restante">0</span></p>
 </div>
 
-<div class="bloco">
-Extrato
-<div id="lista"></div>
+<div class="card">
+  <canvas id="grafico"></canvas>
+</div>
+
+<div class="card">
+  <h3>Extrato</h3>
+  <div id="lista"></div>
 </div>
 
 </div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getFirestore, collection, addDoc, getDocs, query, where } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getFirestore, collection, addDoc, onSnapshot, query, where } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
 const firebaseConfig={
-  apiKey:"AIzaSyAh0Qi4lm-ZXQLe4YAca8wYbp5kcU6lY3I",
-  authDomain:"fluxozap-10ead.firebaseapp.com",
-  projectId:"fluxozap-10ead"
+ apiKey:"AIzaSyAh0Qi4lm-ZXQLe4YAca8wYbp5kcU6lY3I",
+ authDomain:"fluxozap-10ead.firebaseapp.com",
+ projectId:"fluxozap-10ead"
 };
 
 const app=initializeApp(firebaseConfig);
 const db=getFirestore(app);
 const auth=getAuth(app);
 
-let userId="",chart,dados=[];
+let chart;
 
 onAuthStateChanged(auth,user=>{
  if(user){
-  userId=user.uid;
-  nome.innerText=user.email;
-  carregar();
+  usuario.innerText=user.email;
+  carregar(user.uid);
  }else{
   window.location.href="index.html";
  }
@@ -134,77 +134,105 @@ onAuthStateChanged(auth,user=>{
 
 window.addEntrada=async()=>{
  let v=parseFloat(entradaValor.value);
- await addDoc(collection(db,"movimentos"),{tipo:"entrada",valor:v,data:new Date().toISOString(),userId});
- carregar();
+ if(!v)return;
+
+ await addDoc(collection(db,"movimentos"),{
+  tipo:"entrada",
+  valor:v,
+  data:new Date().toISOString(),
+  userId:auth.currentUser.uid
+ });
 }
 
 window.addSaida=async()=>{
  let v=parseFloat(saidaValor.value);
- await addDoc(collection(db,"movimentos"),{tipo:"saida",valor:v,data:new Date().toISOString(),userId});
- carregar();
+ if(!v)return;
+
+ await addDoc(collection(db,"movimentos"),{
+  tipo:"saida",
+  valor:v,
+  data:new Date().toISOString(),
+  userId:auth.currentUser.uid
+ });
 }
 
-async function carregar(){
- let saldo=0,ent=0,sai=0;
- lista.innerHTML="";
- dados=[];
+window.salvarMeta=()=>{
+ localStorage.setItem("meta",metaValor.value);
+ atualizarMeta(0);
+}
 
- const q=query(collection(db,"movimentos"),where("userId","==",userId));
- const docs=await getDocs(q);
+function carregar(uid){
+ const q=query(collection(db,"movimentos"),where("userId","==",uid));
 
- docs.forEach(doc=>{
-  let d=doc.data();
-  dados.push(d);
+ onSnapshot(q,snapshot=>{
+  let saldo=0,entrada=0,saida=0;
+  let hoje=new Date().toDateString();
+  let mesAtual=new Date().getMonth();
 
-  if(d.tipo=="entrada"){saldo+=d.valor;ent+=d.valor;}
-  else{sai+=d.valor;saldo-=d.valor;}
+  let saldoDia=0;
+  let saldoMes=0;
 
-  lista.innerHTML+=`<div>${d.tipo} R$ ${d.valor}</div>`;
+  lista.innerHTML="";
+
+  snapshot.forEach(doc=>{
+   let d=doc.data();
+   let data=new Date(d.data);
+
+   if(d.tipo==="entrada"){
+    saldo+=d.valor;
+    entrada+=d.valor;
+   }else{
+    saldo-=d.valor;
+    saida+=d.valor;
+   }
+
+   if(data.toDateString()===hoje){
+    saldoDia += d.tipo==="entrada"?d.valor:-d.valor;
+   }
+
+   if(data.getMonth()===mesAtual){
+    saldoMes += d.tipo==="entrada"?d.valor:-d.valor;
+   }
+
+   lista.innerHTML+=`
+    <div>
+    ${d.tipo} - R$ ${d.valor} <br>
+    ${data.toLocaleDateString()}
+    </div><hr>
+   `;
+  });
+
+  saldoTotal.innerText="R$ "+saldo;
+  saldoDia.innerText=saldoDia;
+  saldoMes.innerText=saldoMes;
+
+  atualizarGrafico(entrada,saida);
+  atualizarMeta(saida);
  });
+}
 
- saldoEl.innerText=saldo;
+function atualizarGrafico(ent, sai){
+ const ctx=document.getElementById("grafico");
 
  if(chart)chart.destroy();
 
- chart=new Chart(grafico,{
+ chart=new Chart(ctx,{
   type:"doughnut",
   data:{
-   labels:["Entrada","Saída"],
-   datasets:[{data:[ent,sai],backgroundColor:["#00c853","#ff1744"]}]
+   labels:["Recebido","Gasto"],
+   datasets:[{
+    data:[ent,sai],
+    backgroundColor:["#00c853","#ff1744"]
+   }]
   }
  });
 }
 
-window.filtrar=()=>{
- lista.innerHTML="";
- let i=new Date(dataInicio.value);
- let f=new Date(dataFim.value);
+function atualizarMeta(gasto){
+ let meta=localStorage.getItem("meta")||0;
 
- dados.forEach(d=>{
-  let dt=new Date(d.data);
-  if(dt>=i && dt<=f){
-   lista.innerHTML+=`<div>${d.tipo} R$ ${d.valor}</div>`;
-  }
- });
-}
-
-window.pdf=()=>{
- const { jsPDF } = window.jspdf;
- let doc=new jsPDF();
- let y=10;
-
- dados.forEach(d=>{
-  doc.text(`${d.tipo} R$ ${d.valor}`,10,y);
-  y+=10;
- });
-
- doc.save("extrato.pdf");
-}
-</script>
-
-<script>
-if("serviceWorker" in navigator){
- navigator.serviceWorker.register("sw.js");
+ usado.innerText=gasto;
+ restante.innerText=meta-gasto;
 }
 </script>
 
