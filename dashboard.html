@@ -5,7 +5,6 @@
 <title>FluxoZap</title>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
 <style>
 body{
@@ -25,14 +24,45 @@ body{
 
 .user{
  display:flex;
+ flex-direction:column;
  align-items:center;
- gap:10px;
+ gap:5px;
 }
 
-.user img{
- width:45px;
- height:45px;
+.foto-box{
+ position:relative;
+ width:60px;
+ height:60px;
+}
+
+.foto-box img{
+ width:60px;
+ height:60px;
  border-radius:50%;
+ object-fit:cover;
+}
+
+.foto-box label{
+ position:absolute;
+ bottom:0;
+ right:0;
+ background:#00c853;
+ width:20px;
+ height:20px;
+ border-radius:50%;
+ display:flex;
+ justify-content:center;
+ align-items:center;
+ font-size:14px;
+ cursor:pointer;
+}
+
+.foto-box input{
+ display:none;
+}
+
+.nome{
+ font-size:14px;
 }
 
 .saldo{
@@ -73,15 +103,9 @@ button{
 
 .green{background:#00c853;}
 .red{background:#ff1744;}
-.gray{background:#333;}
 
 canvas{
  height:120px !important;
-}
-
-.item{
- border-bottom:1px solid #333;
- padding:6px 0;
 }
 </style>
 </head>
@@ -90,14 +114,18 @@ canvas{
 
 <div class="topo">
  <div>
-  <div id="nomeUsuario"></div>
   <div class="saldo">R$ <span id="saldoTotal">0</span></div>
   <div>Hoje: R$ <span id="saldoDia">0</span></div>
+  <div>Mês: R$ <span id="saldoMes">0</span></div>
  </div>
 
  <div class="user">
-  <input type="file" id="fotoInput">
-  <img id="fotoPerfil">
+  <div class="foto-box">
+    <img id="fotoPerfil">
+    <label for="fotoInput">+</label>
+    <input type="file" id="fotoInput">
+  </div>
+  <div class="nome" id="nomeUsuario"></div>
  </div>
 </div>
 
@@ -105,15 +133,22 @@ canvas{
 
 <div class="card">
  <h3>Receber</h3>
- <input id="entradaValor">
+ <input id="entradaValor" type="number">
  <button class="green" onclick="addEntrada()">Adicionar</button>
 
  <h3>Gastar</h3>
- <input id="saidaValor">
+ <input id="saidaValor" type="number">
  <select id="categoria">
   <option>Alimentação</option>
   <option>Gasolina</option>
-  <option>Contas</option>
+  <option>Energia</option>
+  <option>Água</option>
+  <option>Aluguel</option>
+  <option>Funcionários</option>
+  <option>Internet</option>
+  <option>Telefone</option>
+  <option>Cartão</option>
+  <option>Impostos</option>
   <option>Outros</option>
  </select>
  <button class="red" onclick="addSaida()">Adicionar</button>
@@ -121,14 +156,6 @@ canvas{
 
 <div class="card">
  <canvas id="grafico"></canvas>
-</div>
-
-<div class="card">
- <h3>Filtro</h3>
- <input type="date" id="dataInicio">
- <input type="date" id="dataFim">
- <button onclick="filtrar()">Filtrar</button>
- <button onclick="gerarPDF()">Gerar PDF</button>
 </div>
 
 <div class="card">
@@ -144,70 +171,80 @@ import { getFirestore, collection, addDoc, onSnapshot, query, where, doc, getDoc
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
 
-const app=initializeApp({
+const app = initializeApp({
  apiKey:"AIzaSyAh0Qi4lm-ZXQLe4YAca8wYbp5kcU6lY3I",
  authDomain:"fluxozap-10ead.firebaseapp.com",
  projectId:"fluxozap-10ead"
 });
 
-const db=getFirestore(app);
-const auth=getAuth(app);
-const storage=getStorage(app);
+const db = getFirestore(app);
+const auth = getAuth(app);
+const storage = getStorage(app);
 
 let empresaId="";
-let dados=[];
 let chart;
 
-onAuthStateChanged(auth,async user=>{
+onAuthStateChanged(auth, async user=>{
  if(!user) return location.href="index.html";
 
- let docUser=await getDoc(doc(db,"usuarios",user.uid));
- let data=docUser.data();
+ const docUser = await getDoc(doc(db,"usuarios",user.uid));
+ const data = docUser.data();
 
- empresaId=data.empresaId;
+ empresaId = data.empresaId;
 
- nomeUsuario.innerText=data.nome;
+ // ✔ nome correto
+ nomeUsuario.innerText = data.nome || data.email;
 
- if(data.foto) fotoPerfil.src=data.foto;
+ // ✔ foto
+ if(data.foto) fotoPerfil.src = data.foto;
 
  carregar();
 });
 
 function carregar(){
- const q=query(collection(db,"movimentos"),where("empresaId","==",empresaId));
+ const q = query(collection(db,"movimentos"),where("empresaId","==",empresaId));
 
- onSnapshot(q,(snap)=>{
-  let saldo=0,entrada=0,saida=0,saldoDia=0;
+ onSnapshot(q,(snapshot)=>{
+
+  let saldo=0,entrada=0,saida=0;
+  let saldoDia=0,saldoMes=0;
 
   lista.innerHTML="";
-  dados=[];
 
-  let hoje=new Date().toDateString();
+  let hoje = new Date().toDateString();
+  let mes = new Date().getMonth();
 
-  snap.forEach(doc=>{
+  snapshot.forEach(doc=>{
    let d=doc.data();
    let v=Number(d.valor)||0;
    let tipo=(d.tipo||"").toLowerCase();
    let data=new Date(d.data);
 
-   dados.push(d);
-
-   if(tipo==="entrada"){saldo+=v;entrada+=v;}
-   else{saldo-=v;saida+=v;}
+   if(tipo==="entrada"){
+    saldo+=v; entrada+=v;
+   } else {
+    saldo-=v; saida+=v;
+   }
 
    if(data.toDateString()===hoje){
     saldoDia += tipo==="entrada"?v:-v;
    }
 
+   if(data.getMonth()===mes){
+    saldoMes += tipo==="entrada"?v:-v;
+   }
+
    lista.innerHTML+=`<div>${tipo} - R$ ${v}</div>`;
   });
 
-  saldoTotal.innerText=saldo.toFixed(2);
-  saldoDia.innerText=saldoDia.toFixed(2);
+  saldoTotal.innerText = saldo.toFixed(2);
+  saldoDia.innerText = saldoDia.toFixed(2);
+  saldoMes.innerText = saldoMes.toFixed(2);
 
+  // ✔ gráfico funcionando
   if(chart) chart.destroy();
 
-  chart=new Chart(grafico,{
+  chart = new Chart(grafico,{
    type:"doughnut",
    data:{
     labels:["Entrada","Saída"],
@@ -239,35 +276,12 @@ window.addSaida=async()=>{
  });
 }
 
-window.filtrar=()=>{
- lista.innerHTML="";
- let i=new Date(dataInicio.value);
- let f=new Date(dataFim.value);
-
- dados.forEach(d=>{
-  let dt=new Date(d.data);
-  if(dt>=i && dt<=f){
-   lista.innerHTML+=`<div>${d.tipo} - R$ ${d.valor}</div>`;
-  }
- });
-}
-
-window.gerarPDF=()=>{
- const { jsPDF } = window.jspdf;
- let doc=new jsPDF();
- let y=10;
-
- dados.forEach(d=>{
-  doc.text(`${d.tipo} - R$ ${d.valor}`,10,y);
-  y+=10;
- });
-
- doc.save("extrato.pdf");
-}
-
+// ✔ upload estilo Instagram
 fotoInput.onchange=async()=>{
  let file=fotoInput.files[0];
- let r=ref(storage,"foto"+auth.currentUser.uid);
+ if(!file) return;
+
+ let r=ref(storage,"foto_"+auth.currentUser.uid);
 
  await uploadBytes(r,file);
  let url=await getDownloadURL(r);
