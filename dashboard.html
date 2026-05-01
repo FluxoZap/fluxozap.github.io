@@ -9,13 +9,13 @@
 <style>
 body{
  margin:0;
- background:#0b0c10;
- color:white;
  font-family:Arial;
+ background:#0f0f14;
+ color:white;
 }
 
 .topo{
- background:#6a00ff;
+ background:linear-gradient(135deg,#6a00ff,#8e2de2);
  padding:20px;
  display:flex;
  justify-content:space-between;
@@ -29,9 +29,14 @@ body{
 }
 
 .user img{
- width:50px;
- height:50px;
+ width:45px;
+ height:45px;
  border-radius:50%;
+}
+
+.saldo{
+ font-size:28px;
+ font-weight:bold;
 }
 
 .container{
@@ -41,13 +46,40 @@ body{
 }
 
 .card{
- background:#15171c;
+ background:#1c1c25;
  padding:15px;
  border-radius:15px;
 }
 
+input{
+ width:100%;
+ padding:12px;
+ margin-top:8px;
+ background:#2a2a35;
+ border:none;
+ border-radius:10px;
+ color:white;
+}
+
+button{
+ width:100%;
+ padding:12px;
+ margin-top:10px;
+ border:none;
+ border-radius:10px;
+ font-weight:bold;
+}
+
+.green{background:#00c853;}
+.red{background:#ff1744;}
+
 canvas{
  height:120px !important;
+}
+
+.item{
+ border-bottom:1px solid #333;
+ padding:6px 0;
 }
 </style>
 </head>
@@ -56,8 +88,8 @@ canvas{
 
 <div class="topo">
  <div>
-  <div id="nomeUsuario"></div>
-  <h2>R$ <span id="saldo">0</span></h2>
+  <div id="nomeUsuario">Carregando...</div>
+  <div class="saldo">R$ <span id="saldoTotal">0</span></div>
  </div>
 
  <div class="user">
@@ -69,18 +101,22 @@ canvas{
 <div class="container">
 
 <div class="card">
- <input id="entrada">
- <button onclick="addEntrada()">Entrada</button>
+ <h3>Receber</h3>
+ <input id="entradaValor" type="number">
+ <button class="green" onclick="addEntrada()">Adicionar</button>
 
- <input id="saida">
- <button onclick="addSaida()">Saída</button>
+ <h3>Gastar</h3>
+ <input id="saidaValor" type="number">
+ <button class="red" onclick="addSaida()">Adicionar</button>
 </div>
 
 <div class="card">
+ <h3>Resumo</h3>
  <canvas id="grafico"></canvas>
 </div>
 
 <div class="card">
+ <h3>Extrato</h3>
  <div id="lista"></div>
 </div>
 
@@ -108,15 +144,17 @@ let chart;
 onAuthStateChanged(auth, async user=>{
  if(!user) return location.href="index.html";
 
- let docUser = await getDoc(doc(db,"usuarios",user.uid));
- let data = docUser.data();
+ const userDoc = await getDoc(doc(db,"usuarios",user.uid));
+ const userData = userDoc.data();
 
- empresaId = data.empresaId;
+ empresaId = userData.empresaId;
 
- nomeUsuario.innerText = data.nome || data.email;
+ // ✔ nome corrigido
+ nomeUsuario.innerText = userData.nome || userData.email;
 
- if(data.foto){
-  fotoPerfil.src = data.foto;
+ // ✔ foto carregando
+ if(userData.foto){
+  fotoPerfil.src = userData.foto;
  }
 
  carregar();
@@ -125,26 +163,35 @@ onAuthStateChanged(auth, async user=>{
 function carregar(){
  const q = query(collection(db,"movimentos"),where("empresaId","==",empresaId));
 
- onSnapshot(q,(snap)=>{
+ onSnapshot(q,(snapshot)=>{
+
   let saldo=0,entrada=0,saida=0;
 
   lista.innerHTML="";
 
-  snap.forEach(doc=>{
+  snapshot.forEach(doc=>{
    let d=doc.data();
-   let v=Number(d.valor)||0;
+   let valor = Number(d.valor)||0;
 
-   if(d.tipo==="entrada"){
-    saldo+=v; entrada+=v;
-   }else{
-    saldo-=v; saida+=v;
+   let tipo = (d.tipo || "").toLowerCase();
+
+   if(tipo === "entrada"){
+    saldo += valor;
+    entrada += valor;
+   } else {
+    saldo -= valor;
+    saida += valor;
    }
 
-   lista.innerHTML+=`<div>${d.tipo} R$ ${v}</div>`;
+   lista.innerHTML += `
+   <div class="item">
+     ${tipo.toUpperCase()} - R$ ${valor}
+   </div>`;
   });
 
-  saldo.innerText=saldo.toFixed(2);
+  saldoTotal.innerText = saldo.toFixed(2);
 
+  // ✔ gráfico corrigido
   if(chart) chart.destroy();
 
   chart = new Chart(document.getElementById("grafico"),{
@@ -153,42 +200,56 @@ function carregar(){
     labels:["Entrada","Saída"],
     datasets:[{
      data:[entrada,saida],
-     backgroundColor:["green","red"]
+     backgroundColor:["#00c853","#ff1744"]
     }]
    }
   });
  });
 }
 
-window.addEntrada=async()=>{
+window.addEntrada = async()=>{
+ let v = Number(entradaValor.value);
+ if(!v) return;
+
  await addDoc(collection(db,"movimentos"),{
   tipo:"entrada",
-  valor:Number(entrada.value),
+  valor:v,
+  data:new Date().toISOString(),
   empresaId
  });
+
+ entradaValor.value="";
 }
 
-window.addSaida=async()=>{
+window.addSaida = async()=>{
+ let v = Number(saidaValor.value);
+ if(!v) return;
+
  await addDoc(collection(db,"movimentos"),{
   tipo:"saida",
-  valor:Number(saida.value),
+  valor:v,
+  data:new Date().toISOString(),
   empresaId
  });
+
+ saidaValor.value="";
 }
 
-fotoInput.onchange=async()=>{
- let file=fotoInput.files[0];
+// ✔ foto funcionando de verdade
+fotoInput.onchange = async()=>{
+ let file = fotoInput.files[0];
+ if(!file) return;
 
- let r=ref(storage,"foto"+auth.currentUser.uid);
+ let r = ref(storage,"foto_"+auth.currentUser.uid);
 
  await uploadBytes(r,file);
- let url=await getDownloadURL(r);
+ let url = await getDownloadURL(r);
 
  await setDoc(doc(db,"usuarios",auth.currentUser.uid),{
   foto:url
  },{merge:true});
 
- fotoPerfil.src=url;
+ fotoPerfil.src = url;
 }
 </script>
 
