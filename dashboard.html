@@ -26,6 +26,7 @@ body{
  display:flex;
  flex-direction:column;
  align-items:center;
+ gap:5px;
 }
 
 .foto-box{
@@ -71,29 +72,29 @@ body{
 
 input,select{
  width:100%;
- padding:10px;
- margin-top:5px;
+ padding:12px;
+ margin-top:8px;
  background:#2a2a35;
  border:none;
- border-radius:8px;
+ border-radius:10px;
  color:white;
 }
 
 button{
  width:100%;
- padding:10px;
- margin-top:5px;
+ padding:12px;
+ margin-top:10px;
  border:none;
- border-radius:8px;
+ border-radius:10px;
  font-weight:bold;
 }
 
 .green{background:#00c853;}
 .red{background:#ff1744;}
 
-.item{border-bottom:1px solid #333;padding:5px;}
-
-canvas{height:120px !important;}
+canvas{
+ height:120px !important;
+}
 </style>
 </head>
 
@@ -101,7 +102,7 @@ canvas{height:120px !important;}
 
 <div class="topo">
  <div>
-  <div>Saldo: R$ <span id="saldoTotal">0</span></div>
+  <div class="saldo">R$ <span id="saldoTotal">0</span></div>
   <div>Hoje: R$ <span id="saldoDia">0</span></div>
   <div>Mês: R$ <span id="saldoMes">0</span></div>
  </div>
@@ -133,6 +134,9 @@ canvas{height:120px !important;}
   <option>Aluguel</option>
   <option>Funcionários</option>
   <option>Internet</option>
+  <option>Telefone</option>
+  <option>Cartão</option>
+  <option>Impostos</option>
   <option>Outros</option>
  </select>
  <button class="red" onclick="addSaida()">Adicionar</button>
@@ -142,15 +146,16 @@ canvas{height:120px !important;}
  <canvas id="grafico"></canvas>
 </div>
 
-<div class="card">
- <h3>Meta mensal</h3>
+<!-- 🔥 NOVOS RECURSOS SEM MEXER NO LAYOUT -->
+<div class="card" id="metaCard">
+ <h3>Meta Mensal</h3>
  <input id="metaValor">
- <button onclick="salvarMeta()">Salvar meta</button>
+ <button onclick="salvarMeta()">Salvar</button>
  <div id="metaStatus"></div>
 </div>
 
-<div class="card" id="painelAdmin" style="display:none">
- <h3>Funcionários</h3>
+<div class="card" id="adminCard" style="display:none">
+ <h3>Resumo Funcionários</h3>
  <div id="listaFuncionarios"></div>
 </div>
 
@@ -176,11 +181,9 @@ const db=getFirestore(app);
 const auth=getAuth(app);
 
 let empresaId="",userId="",nivel="";
-let chart;
-let dados=[];
-let meta=0;
+let chart, dados=[], meta=0;
 
-onAuthStateChanged(auth,async user=>{
+onAuthStateChanged(auth, async user=>{
  if(!user) return location.href="index.html";
 
  userId=user.uid;
@@ -191,7 +194,7 @@ onAuthStateChanged(auth,async user=>{
  empresaId=data.empresaId||user.uid;
  nivel=data.nivel||"admin";
 
- nomeUsuario.innerText=data.nome;
+ nomeUsuario.innerText=data.nome||"Usuário";
 
  if(data.foto) fotoPerfil.src=data.foto;
 
@@ -199,13 +202,9 @@ onAuthStateChanged(auth,async user=>{
 });
 
 function carregar(){
- let q;
-
- if(nivel==="admin"){
-  q=query(collection(db,"movimentos"),where("empresaId","==",empresaId));
- }else{
-  q=query(collection(db,"movimentos"),where("userId","==",userId));
- }
+ let q = nivel==="admin"
+  ? query(collection(db,"movimentos"),where("empresaId","==",empresaId))
+  : query(collection(db,"movimentos"),where("userId","==",userId));
 
  onSnapshot(q,(snap)=>{
   let saldo=0,entrada=0,saida=0;
@@ -220,25 +219,22 @@ function carregar(){
   snap.forEach(doc=>{
    let d=doc.data();
    let v=Number(d.valor)||0;
-   let data=new Date(d.data);
+   let dt=new Date(d.data);
 
    dados.push(d);
 
-   if(d.tipo==="entrada"){
-    saldo+=v; entrada+=v;
-   }else{
-    saldo-=v; saida+=v;
-   }
+   if(d.tipo==="entrada"){saldo+=v; entrada+=v;}
+   else{saldo-=v; saida+=v;}
 
-   if(data.toDateString()===hoje){
+   if(dt.toDateString()===hoje){
     saldoDia += d.tipo==="entrada"?v:-v;
    }
 
-   if(data.getMonth()===mes){
+   if(dt.getMonth()===mes){
     saldoMes += d.tipo==="entrada"?v:-v;
    }
 
-   lista.innerHTML+=`<div class="item">${d.tipo} - R$ ${v} (${d.categoria||""})</div>`;
+   lista.innerHTML+=`<div>${d.tipo} - R$ ${v} (${d.categoria||""})</div>`;
   });
 
   saldoTotal.innerText=saldo.toFixed(2);
@@ -247,22 +243,21 @@ function carregar(){
 
   if(meta){
    let p=(saldoMes/meta)*100;
-   metaStatus.innerText="Meta: "+p.toFixed(1)+"%";
+   metaStatus.innerText="Progresso: "+p.toFixed(1)+"%";
   }
 
   if(nivel==="admin"){
-   painelAdmin.style.display="block";
+   adminCard.style.display="block";
 
    let resumo={};
 
    dados.forEach(d=>{
-    if(!resumo[d.userId]) resumo[d.userId]=0;
-    resumo[d.userId]+=d.tipo==="entrada"?d.valor:-d.valor;
+    resumo[d.userId]=(resumo[d.userId]||0)+(d.tipo==="entrada"?d.valor:-d.valor);
    });
 
    listaFuncionarios.innerHTML="";
    Object.keys(resumo).forEach(id=>{
-    listaFuncionarios.innerHTML+=`<div class="item">${id} → R$ ${resumo[id].toFixed(2)}</div>`;
+    listaFuncionarios.innerHTML+=`<div>${id} → R$ ${resumo[id].toFixed(2)}</div>`;
    });
   }
 
@@ -287,8 +282,7 @@ window.addEntrada=async()=>{
  await addDoc(collection(db,"movimentos"),{
   tipo:"entrada",
   valor:Number(entradaValor.value),
-  empresaId,
-  userId,
+  empresaId,userId,
   data:new Date().toISOString()
  });
 }
@@ -298,8 +292,7 @@ window.addSaida=async()=>{
   tipo:"saida",
   valor:Number(saidaValor.value),
   categoria:categoria.value,
-  empresaId,
-  userId,
+  empresaId,userId,
   data:new Date().toISOString()
  });
 }
