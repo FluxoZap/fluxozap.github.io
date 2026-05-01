@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <title>FluxoZap</title>
 
+<link rel="manifest" href="manifest.json">
+
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -11,7 +13,7 @@
 <style>
 body{
   margin:0;
-  font-family:'Inter',sans-serif;
+  font-family:Inter;
   background:#0b0c10;
   color:white;
 }
@@ -31,16 +33,15 @@ body{
 
 .saldo{
   font-size:40px;
-  font-weight:700;
 }
 
 input,select{
   width:100%;
   padding:12px;
   margin-top:10px;
+  background:#222;
   border:none;
   border-radius:10px;
-  background:#222;
   color:white;
 }
 
@@ -50,25 +51,12 @@ button{
   margin-top:10px;
   border:none;
   border-radius:10px;
-  font-weight:bold;
-  cursor:pointer;
 }
 
 .recebi{background:#00c853;}
 .gastei{background:#ff1744;}
 
-.item{
-  padding:10px;
-  border-bottom:1px solid #333;
-}
-
-canvas{
-  max-height:250px;
-}
-
-@media(max-width:900px){
-  .container{grid-template-columns:1fr;}
-}
+canvas{max-height:250px;}
 </style>
 </head>
 
@@ -77,46 +65,42 @@ canvas{
 <div class="container">
 
 <div class="bloco">
-  <div>Saldo Total</div>
-  <div class="saldo">R$ <span id="saldo">0</span></div>
+Saldo Total
+<div class="saldo">R$ <span id="saldo">0</span></div>
+</div>
+
+<div class="bloco" id="nome"></div>
+
+<div class="bloco">
+Receber
+<input id="entradaValor">
+<button class="recebi" onclick="addEntrada()">Adicionar</button>
+
+Gastar
+<input id="saidaValor">
+<select id="categoria">
+<option>Alimentação</option>
+<option>Transporte</option>
+<option>Contas</option>
+</select>
+<button class="gastei" onclick="addSaida()">Adicionar</button>
 </div>
 
 <div class="bloco">
-  <div id="nome"></div>
+Filtro
+<input type="date" id="dataInicio">
+<input type="date" id="dataFim">
+<button onclick="filtrar()">Filtrar</button>
+<button onclick="pdf()">PDF</button>
 </div>
 
 <div class="bloco">
-  <h3>Receber</h3>
-  <input id="entradaValor" type="number">
-  <button class="recebi" onclick="addEntrada()">Adicionar</button>
-
-  <h3>Gastar</h3>
-  <input id="saidaValor" type="number">
-  <select id="categoria">
-    <option>Alimentação</option>
-    <option>Transporte</option>
-    <option>Contas</option>
-    <option>Lazer</option>
-    <option>Outros</option>
-  </select>
-  <button class="gastei" onclick="addSaida()">Adicionar</button>
+<canvas id="grafico"></canvas>
 </div>
 
 <div class="bloco">
-  <h3>Filtro</h3>
-  <input type="date" id="dataInicio">
-  <input type="date" id="dataFim">
-  <button onclick="filtrar()">Filtrar</button>
-  <button onclick="gerarPDF()">Exportar PDF</button>
-</div>
-
-<div class="bloco">
-  <canvas id="grafico"></canvas>
-</div>
-
-<div class="bloco">
-  <h3>Extrato</h3>
-  <div id="lista"></div>
+Extrato
+<div id="lista"></div>
 </div>
 
 </div>
@@ -136,131 +120,91 @@ const app=initializeApp(firebaseConfig);
 const db=getFirestore(app);
 const auth=getAuth(app);
 
-let userId="";
-let chart;
-let dados=[];
+let userId="",chart,dados=[];
 
 onAuthStateChanged(auth,user=>{
-  if(user){
-    userId=user.uid;
-    nome.innerText=user.email;
-    carregar();
-  }else{
-    window.location.href="index.html";
-  }
+ if(user){
+  userId=user.uid;
+  nome.innerText=user.email;
+  carregar();
+ }else{
+  window.location.href="index.html";
+ }
 });
 
 window.addEntrada=async()=>{
-  let v=parseFloat(entradaValor.value);
-  if(!v)return;
-
-  await addDoc(collection(db,"movimentos"),{
-    tipo:"entrada",valor:v,data:new Date().toISOString(),userId
-  });
-
-  carregar();
+ let v=parseFloat(entradaValor.value);
+ await addDoc(collection(db,"movimentos"),{tipo:"entrada",valor:v,data:new Date().toISOString(),userId});
+ carregar();
 }
 
 window.addSaida=async()=>{
-  let v=parseFloat(saidaValor.value);
-  let cat=categoria.value;
-  if(!v)return;
-
-  await addDoc(collection(db,"movimentos"),{
-    tipo:"saida",valor:v,categoria:cat,data:new Date().toISOString(),userId
-  });
-
-  carregar();
+ let v=parseFloat(saidaValor.value);
+ await addDoc(collection(db,"movimentos"),{tipo:"saida",valor:v,data:new Date().toISOString(),userId});
+ carregar();
 }
 
 async function carregar(){
-  lista.innerHTML="";
-  dados=[];
+ let saldo=0,ent=0,sai=0;
+ lista.innerHTML="";
+ dados=[];
 
-  let saldo=0,entrada=0,saida=0;
+ const q=query(collection(db,"movimentos"),where("userId","==",userId));
+ const docs=await getDocs(q);
 
-  const q=query(collection(db,"movimentos"),where("userId","==",userId));
-  const docs=await getDocs(q);
+ docs.forEach(doc=>{
+  let d=doc.data();
+  dados.push(d);
 
-  docs.forEach(doc=>{
-    let d=doc.data();
-    dados.push(d);
+  if(d.tipo=="entrada"){saldo+=d.valor;ent+=d.valor;}
+  else{sai+=d.valor;saldo-=d.valor;}
 
-    let dataFormat=new Date(d.data).toLocaleDateString();
+  lista.innerHTML+=`<div>${d.tipo} R$ ${d.valor}</div>`;
+ });
 
-    if(d.tipo==="entrada"){
-      saldo+=d.valor;
-      entrada+=d.valor;
-    }else{
-      saldo-=d.valor;
-      saida+=d.valor;
-    }
+ saldoEl.innerText=saldo;
 
-    lista.innerHTML+=`
-      <div class="item">
-        ${d.tipo==="entrada"?"Entrada":"Saída"} - ${d.categoria||""}
-        <br>R$ ${d.valor} | ${dataFormat}
-      </div>
-    `;
-  });
+ if(chart)chart.destroy();
 
-  document.getElementById("saldo").innerText=saldo;
-
-  // 🔥 GARANTIA DO GRÁFICO
-  const ctx = document.getElementById("grafico").getContext("2d");
-
-  if(chart){
-    chart.destroy();
+ chart=new Chart(grafico,{
+  type:"doughnut",
+  data:{
+   labels:["Entrada","Saída"],
+   datasets:[{data:[ent,sai],backgroundColor:["#00c853","#ff1744"]}]
   }
-
-  chart = new Chart(ctx,{
-    type:"doughnut",
-    data:{
-      labels:["Recebido","Gasto"],
-      datasets:[{
-        data:[entrada,saida],
-        backgroundColor:["#00c853","#ff1744"]
-      }]
-    },
-    options:{
-      responsive:true,
-      animation:{duration:800}
-    }
-  });
+ });
 }
 
 window.filtrar=()=>{
-  let inicio=new Date(dataInicio.value);
-  let fim=new Date(dataFim.value);
+ lista.innerHTML="";
+ let i=new Date(dataInicio.value);
+ let f=new Date(dataFim.value);
 
-  lista.innerHTML="";
-
-  dados.forEach(d=>{
-    let data=new Date(d.data);
-
-    if(data>=inicio && data<=fim){
-      lista.innerHTML+=`
-        <div class="item">
-          ${d.tipo==="entrada"?"Entrada":"Saída"}
-          <br>R$ ${d.valor}
-        </div>
-      `;
-    }
-  });
+ dados.forEach(d=>{
+  let dt=new Date(d.data);
+  if(dt>=i && dt<=f){
+   lista.innerHTML+=`<div>${d.tipo} R$ ${d.valor}</div>`;
+  }
+ });
 }
 
-window.gerarPDF=()=>{
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF();
+window.pdf=()=>{
+ const { jsPDF } = window.jspdf;
+ let doc=new jsPDF();
+ let y=10;
 
-  let y=10;
+ dados.forEach(d=>{
+  doc.text(`${d.tipo} R$ ${d.valor}`,10,y);
+  y+=10;
+ });
 
-  dados.forEach(d=>{
-    doc.text(`${d.tipo} - R$ ${d.valor}`,10,y);
-    y+=10;
-  });
+ doc.save("extrato.pdf");
+}
+</script>
 
-  doc.save("extrato.pdf");
+<script>
+if("serviceWorker" in navigator){
+ navigator.serviceWorker.register("sw.js");
 }
 </script>
 
