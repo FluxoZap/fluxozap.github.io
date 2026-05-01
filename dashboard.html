@@ -5,6 +5,7 @@
 <title>FluxoZap</title>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
 <style>
 body{
@@ -35,7 +36,7 @@ body{
 }
 
 .saldo{
- font-size:28px;
+ font-size:26px;
  font-weight:bold;
 }
 
@@ -51,7 +52,7 @@ body{
  border-radius:15px;
 }
 
-input{
+input,select{
  width:100%;
  padding:12px;
  margin-top:8px;
@@ -72,6 +73,7 @@ button{
 
 .green{background:#00c853;}
 .red{background:#ff1744;}
+.gray{background:#333;}
 
 canvas{
  height:120px !important;
@@ -88,8 +90,9 @@ canvas{
 
 <div class="topo">
  <div>
-  <div id="nomeUsuario">Carregando...</div>
+  <div id="nomeUsuario"></div>
   <div class="saldo">R$ <span id="saldoTotal">0</span></div>
+  <div>Hoje: R$ <span id="saldoDia">0</span></div>
  </div>
 
  <div class="user">
@@ -102,17 +105,30 @@ canvas{
 
 <div class="card">
  <h3>Receber</h3>
- <input id="entradaValor" type="number">
+ <input id="entradaValor">
  <button class="green" onclick="addEntrada()">Adicionar</button>
 
  <h3>Gastar</h3>
- <input id="saidaValor" type="number">
+ <input id="saidaValor">
+ <select id="categoria">
+  <option>Alimentação</option>
+  <option>Gasolina</option>
+  <option>Contas</option>
+  <option>Outros</option>
+ </select>
  <button class="red" onclick="addSaida()">Adicionar</button>
 </div>
 
 <div class="card">
- <h3>Resumo</h3>
  <canvas id="grafico"></canvas>
+</div>
+
+<div class="card">
+ <h3>Filtro</h3>
+ <input type="date" id="dataInicio">
+ <input type="date" id="dataFim">
+ <button onclick="filtrar()">Filtrar</button>
+ <button onclick="gerarPDF()">Gerar PDF</button>
 </div>
 
 <div class="card">
@@ -128,73 +144,70 @@ import { getFirestore, collection, addDoc, onSnapshot, query, where, doc, getDoc
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
 
-const app = initializeApp({
+const app=initializeApp({
  apiKey:"AIzaSyAh0Qi4lm-ZXQLe4YAca8wYbp5kcU6lY3I",
  authDomain:"fluxozap-10ead.firebaseapp.com",
  projectId:"fluxozap-10ead"
 });
 
-const db = getFirestore(app);
-const auth = getAuth(app);
-const storage = getStorage(app);
+const db=getFirestore(app);
+const auth=getAuth(app);
+const storage=getStorage(app);
 
 let empresaId="";
+let dados=[];
 let chart;
 
-onAuthStateChanged(auth, async user=>{
+onAuthStateChanged(auth,async user=>{
  if(!user) return location.href="index.html";
 
- const userDoc = await getDoc(doc(db,"usuarios",user.uid));
- const userData = userDoc.data();
+ let docUser=await getDoc(doc(db,"usuarios",user.uid));
+ let data=docUser.data();
 
- empresaId = userData.empresaId;
+ empresaId=data.empresaId;
 
- // ✔ nome corrigido
- nomeUsuario.innerText = userData.nome || userData.email;
+ nomeUsuario.innerText=data.nome;
 
- // ✔ foto carregando
- if(userData.foto){
-  fotoPerfil.src = userData.foto;
- }
+ if(data.foto) fotoPerfil.src=data.foto;
 
  carregar();
 });
 
 function carregar(){
- const q = query(collection(db,"movimentos"),where("empresaId","==",empresaId));
+ const q=query(collection(db,"movimentos"),where("empresaId","==",empresaId));
 
- onSnapshot(q,(snapshot)=>{
-
-  let saldo=0,entrada=0,saida=0;
+ onSnapshot(q,(snap)=>{
+  let saldo=0,entrada=0,saida=0,saldoDia=0;
 
   lista.innerHTML="";
+  dados=[];
 
-  snapshot.forEach(doc=>{
+  let hoje=new Date().toDateString();
+
+  snap.forEach(doc=>{
    let d=doc.data();
-   let valor = Number(d.valor)||0;
+   let v=Number(d.valor)||0;
+   let tipo=(d.tipo||"").toLowerCase();
+   let data=new Date(d.data);
 
-   let tipo = (d.tipo || "").toLowerCase();
+   dados.push(d);
 
-   if(tipo === "entrada"){
-    saldo += valor;
-    entrada += valor;
-   } else {
-    saldo -= valor;
-    saida += valor;
+   if(tipo==="entrada"){saldo+=v;entrada+=v;}
+   else{saldo-=v;saida+=v;}
+
+   if(data.toDateString()===hoje){
+    saldoDia += tipo==="entrada"?v:-v;
    }
 
-   lista.innerHTML += `
-   <div class="item">
-     ${tipo.toUpperCase()} - R$ ${valor}
-   </div>`;
+   lista.innerHTML+=`<div>${tipo} - R$ ${v}</div>`;
   });
 
-  saldoTotal.innerText = saldo.toFixed(2);
+  saldoTotal.innerText=saldo.toFixed(2);
+  saldoDia.innerText=saldoDia.toFixed(2);
 
-  // ✔ gráfico corrigido
   if(chart) chart.destroy();
 
-  chart = new Chart(document.getElementById("grafico"),{
+  chart=new Chart(grafico,{
    type:"doughnut",
    data:{
     labels:["Entrada","Saída"],
@@ -207,49 +220,63 @@ function carregar(){
  });
 }
 
-window.addEntrada = async()=>{
- let v = Number(entradaValor.value);
- if(!v) return;
-
+window.addEntrada=async()=>{
  await addDoc(collection(db,"movimentos"),{
   tipo:"entrada",
-  valor:v,
+  valor:Number(entradaValor.value),
   data:new Date().toISOString(),
   empresaId
  });
-
- entradaValor.value="";
 }
 
-window.addSaida = async()=>{
- let v = Number(saidaValor.value);
- if(!v) return;
-
+window.addSaida=async()=>{
  await addDoc(collection(db,"movimentos"),{
   tipo:"saida",
-  valor:v,
+  valor:Number(saidaValor.value),
+  categoria:categoria.value,
   data:new Date().toISOString(),
   empresaId
  });
-
- saidaValor.value="";
 }
 
-// ✔ foto funcionando de verdade
-fotoInput.onchange = async()=>{
- let file = fotoInput.files[0];
- if(!file) return;
+window.filtrar=()=>{
+ lista.innerHTML="";
+ let i=new Date(dataInicio.value);
+ let f=new Date(dataFim.value);
 
- let r = ref(storage,"foto_"+auth.currentUser.uid);
+ dados.forEach(d=>{
+  let dt=new Date(d.data);
+  if(dt>=i && dt<=f){
+   lista.innerHTML+=`<div>${d.tipo} - R$ ${d.valor}</div>`;
+  }
+ });
+}
+
+window.gerarPDF=()=>{
+ const { jsPDF } = window.jspdf;
+ let doc=new jsPDF();
+ let y=10;
+
+ dados.forEach(d=>{
+  doc.text(`${d.tipo} - R$ ${d.valor}`,10,y);
+  y+=10;
+ });
+
+ doc.save("extrato.pdf");
+}
+
+fotoInput.onchange=async()=>{
+ let file=fotoInput.files[0];
+ let r=ref(storage,"foto"+auth.currentUser.uid);
 
  await uploadBytes(r,file);
- let url = await getDownloadURL(r);
+ let url=await getDownloadURL(r);
 
  await setDoc(doc(db,"usuarios",auth.currentUser.uid),{
   foto:url
  },{merge:true});
 
- fotoPerfil.src = url;
+ fotoPerfil.src=url;
 }
 </script>
 
