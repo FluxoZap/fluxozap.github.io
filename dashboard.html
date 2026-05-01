@@ -10,40 +10,49 @@
 <style>
 body{
   margin:0;
-  font-family:Arial;
-  background:#0b0c10;
+  font-family: 'Inter', sans-serif;
+  background:#0f0f14;
   color:white;
 }
 
-.container{
-  display:grid;
-  grid-template-columns:1fr 1fr;
-  gap:20px;
+.topo{
   padding:20px;
+  background:linear-gradient(135deg,#6a00ff,#8e2de2);
+}
+
+.saldo{
+  font-size:32px;
+  font-weight:bold;
+}
+
+.container{
+  padding:15px;
+  display:grid;
+  gap:15px;
 }
 
 .card{
-  background:#15171c;
-  padding:20px;
+  background:#1c1c25;
+  padding:15px;
   border-radius:15px;
 }
 
 input,select{
   width:100%;
-  padding:10px;
-  margin-top:10px;
-  background:#222;
+  padding:12px;
+  margin-top:8px;
+  background:#2a2a35;
   border:none;
-  border-radius:8px;
+  border-radius:10px;
   color:white;
 }
 
 button{
   width:100%;
-  padding:10px;
+  padding:12px;
   margin-top:10px;
   border:none;
-  border-radius:8px;
+  border-radius:10px;
   font-weight:bold;
 }
 
@@ -51,44 +60,43 @@ button{
 .red{background:#ff1744;}
 .gray{background:#333;}
 
+.item{
+  border-bottom:1px solid #333;
+  padding:5px 0;
+}
+
 canvas{max-height:200px;}
 </style>
 </head>
 
 <body>
 
+<div class="topo">
+  <div id="usuario"></div>
+  <div class="saldo">R$ <span id="saldoTotal">0</span></div>
+  <div>Hoje: R$ <span id="saldoDia">0</span></div>
+</div>
+
 <div class="container">
 
 <div class="card">
-  <h2>Saldo Total</h2>
-  <h1 id="saldoTotal">R$ 0</h1>
+  <h3>💰 Caixa do Dia (Lanchonete)</h3>
 
-  <h3>Hoje: R$ <span id="saldoDia">0</span></h3>
-  <h3>Mês: R$ <span id="saldoMes">0</span></h3>
+  <input id="entradaValor" placeholder="Valor recebido">
+  <button class="green" onclick="addEntrada()">Registrar venda</button>
+
+  <input id="saidaValor" placeholder="Gasto do dia">
+  <button class="red" onclick="addSaida()">Registrar gasto</button>
 </div>
 
 <div class="card">
-  <h3 id="usuario"></h3>
+  <h3>📊 Gráfico</h3>
+  <canvas id="grafico"></canvas>
 </div>
 
 <div class="card">
-  <h3>Receber</h3>
-  <input id="entradaValor" type="number">
-  <button class="green" onclick="addEntrada()">Adicionar</button>
-
-  <h3>Gastar</h3>
-  <input id="saidaValor" type="number">
-  <select id="categoria">
-    <option>Alimentação</option>
-    <option>Transporte</option>
-    <option>Contas</option>
-  </select>
-  <button class="red" onclick="addSaida()">Adicionar</button>
-</div>
-
-<div class="card">
-  <h3>Meta mensal</h3>
-  <input id="metaValor" placeholder="Digite meta">
+  <h3>🎯 Meta mensal</h3>
+  <input id="metaValor">
   <button onclick="salvarMeta()">Salvar</button>
 
   <p>Usado: R$ <span id="usado">0</span></p>
@@ -96,19 +104,15 @@ canvas{max-height:200px;}
 </div>
 
 <div class="card">
-  <h3>Filtro</h3>
+  <h3>📅 Filtro</h3>
   <input type="date" id="dataInicio">
   <input type="date" id="dataFim">
   <button class="gray" onclick="filtrar()">Filtrar</button>
-  <button class="gray" onclick="gerarPDF()">Exportar PDF</button>
+  <button class="gray" onclick="gerarPDF()">PDF</button>
 </div>
 
 <div class="card">
-  <canvas id="grafico"></canvas>
-</div>
-
-<div class="card">
-  <h3>Extrato</h3>
+  <h3>📄 Extrato</h3>
   <div id="lista"></div>
 </div>
 
@@ -135,15 +139,62 @@ let dados=[];
 onAuthStateChanged(auth,user=>{
  if(user){
   usuario.innerText=user.email;
-  carregar(user.uid);
+  iniciar(user.uid);
  }else{
   window.location.href="index.html";
  }
 });
 
-window.addEntrada=async()=>{
+function iniciar(uid){
+ const q=query(collection(db,"movimentos"),where("userId","==",uid));
+
+ onSnapshot(q,(snapshot)=>{
+
+  let saldo=0;
+  let entrada=0;
+  let saida=0;
+  let saldoDia=0;
+
+  dados=[];
+  lista.innerHTML="";
+
+  let hoje=new Date().toDateString();
+
+  snapshot.forEach(doc=>{
+   let d=doc.data();
+   let data=new Date(d.data);
+
+   dados.push(d);
+
+   if(d.tipo==="Entrada"){
+    saldo += d.valor;
+    entrada += d.valor;
+   }else{
+    saldo -= d.valor;
+    saida += d.valor;
+   }
+
+   if(data.toDateString()===hoje){
+    saldoDia += d.tipo==="Entrada"?d.valor:-d.valor;
+   }
+
+   lista.innerHTML += `
+   <div class="item">
+    ${d.tipo} - R$ ${d.valor}
+   </div>`;
+  });
+
+  saldoTotal.innerText = saldo;
+  saldoDia.innerText = saldoDia;
+
+  atualizarGrafico(entrada,saida);
+  atualizarMeta(saida);
+ });
+}
+
+window.addEntrada = async()=>{
  let v=parseFloat(entradaValor.value);
- if(!v)return;
+ if(!v) return;
 
  await addDoc(collection(db,"movimentos"),{
   tipo:"Entrada",
@@ -151,11 +202,13 @@ window.addEntrada=async()=>{
   data:new Date().toISOString(),
   userId:auth.currentUser.uid
  });
+
+ entradaValor.value="";
 }
 
-window.addSaida=async()=>{
+window.addSaida = async()=>{
  let v=parseFloat(saidaValor.value);
- if(!v)return;
+ if(!v) return;
 
  await addDoc(collection(db,"movimentos"),{
   tipo:"Saída",
@@ -163,80 +216,29 @@ window.addSaida=async()=>{
   data:new Date().toISOString(),
   userId:auth.currentUser.uid
  });
-}
 
-window.salvarMeta=()=>{
- localStorage.setItem("meta",metaValor.value);
- atualizarMeta(0);
-}
-
-function carregar(uid){
- const q=query(collection(db,"movimentos"),where("userId","==",uid));
-
- onSnapshot(q,snapshot=>{
-  let saldo=0,entrada=0,saida=0;
-  let hoje=new Date().toDateString();
-  let mesAtual=new Date().getMonth();
-
-  let saldoDia=0;
-  let saldoMes=0;
-
-  lista.innerHTML="";
-  dados=[];
-
-  snapshot.forEach(doc=>{
-   let d=doc.data();
-   let data=new Date(d.data);
-   dados.push(d);
-
-   if(d.tipo==="Entrada"){
-    saldo+=d.valor;
-    entrada+=d.valor;
-   }else{
-    saldo-=d.valor;
-    saida+=d.valor;
-   }
-
-   if(data.toDateString()===hoje){
-    saldoDia += d.tipo==="Entrada"?d.valor:-d.valor;
-   }
-
-   if(data.getMonth()===mesAtual){
-    saldoMes += d.tipo==="Entrada"?d.valor:-d.valor;
-   }
-
-   lista.innerHTML+=`
-    <div>
-    ${d.tipo} - R$ ${d.valor} <br>
-    ${data.toLocaleDateString()}
-    </div><hr>
-   `;
-  });
-
-  saldoTotal.innerText="R$ "+saldo;
-  saldoDia.innerText=saldoDia;
-  saldoMes.innerText=saldoMes;
-
-  atualizarGrafico(entrada,saida);
-  atualizarMeta(saida);
- });
+ saidaValor.value="";
 }
 
 function atualizarGrafico(ent, sai){
  const ctx=document.getElementById("grafico");
 
- if(chart)chart.destroy();
+ if(chart) chart.destroy();
 
  chart=new Chart(ctx,{
   type:"doughnut",
   data:{
-   labels:["Recebido","Gasto"],
+   labels:["Entradas","Saídas"],
    datasets:[{
     data:[ent,sai],
     backgroundColor:["#00c853","#ff1744"]
    }]
   }
  });
+}
+
+window.salvarMeta=()=>{
+ localStorage.setItem("meta",metaValor.value);
 }
 
 function atualizarMeta(gasto){
@@ -246,21 +248,19 @@ function atualizarMeta(gasto){
  restante.innerText=meta-gasto;
 
  if(meta>0 && gasto>=meta*0.75){
-  alert("⚠️ Você já gastou 75% da sua meta!");
+  alert("⚠️ Você gastou 75% da meta");
  }
 }
 
 window.filtrar=()=>{
  lista.innerHTML="";
- let inicio=new Date(dataInicio.value);
- let fim=new Date(dataFim.value);
+ let i=new Date(dataInicio.value);
+ let f=new Date(dataFim.value);
 
  dados.forEach(d=>{
   let dt=new Date(d.data);
-  if(dt>=inicio && dt<=fim){
-   lista.innerHTML+=`
-   <div>${d.tipo} - R$ ${d.valor}</div><hr>
-   `;
+  if(dt>=i && dt<=f){
+   lista.innerHTML += `<div>${d.tipo} - R$ ${d.valor}</div>`;
   }
  });
 }
@@ -270,7 +270,6 @@ window.gerarPDF=()=>{
  const doc = new jsPDF();
 
  let y=10;
-
  dados.forEach(d=>{
   doc.text(`${d.tipo} - R$ ${d.valor}`,10,y);
   y+=10;
