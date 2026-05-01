@@ -4,109 +4,104 @@
 <meta charset="UTF-8">
 <title>FluxoZap</title>
 
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
 body{
   margin:0;
   font-family:'Inter',sans-serif;
-  background:#0f1115;
+  background:#0b0c10;
   color:white;
 }
 
-.container{display:flex;height:100vh;}
-
-.sidebar{
-  width:220px;
-  background:#15171c;
+/* HEADER */
+.header{
   padding:20px;
 }
 
-.main{
+.saldo{
+  font-size:34px;
+  font-weight:700;
+}
+
+/* BOTÕES RÁPIDOS */
+.actions{
+  display:flex;
+  gap:10px;
+  padding:10px 20px;
+}
+
+.actions button{
   flex:1;
-  padding:20px;
-  display:grid;
-  grid-template-columns:1fr 1fr;
-  gap:20px;
+  padding:14px;
+  border:none;
+  border-radius:12px;
+  font-weight:bold;
 }
 
-.bloco{
-  background:#1a1d23;
-  padding:20px;
+.receber{background:#00c853;}
+.gastar{background:#ff1744;}
+
+/* CARDS */
+.card{
+  background:#15171c;
+  margin:15px;
+  padding:15px;
   border-radius:15px;
 }
 
-.saldo{font-size:36px;font-weight:bold;}
-
+/* INPUT */
 input,select{
   width:100%;
   padding:12px;
-  border-radius:10px;
   border:none;
-  background:#2a2d35;
+  border-radius:10px;
+  background:#222;
   color:white;
   margin-top:10px;
 }
 
-button{
-  padding:12px;
-  border:none;
+/* BARRA */
+.barra{
+  height:10px;
+  background:#333;
   border-radius:10px;
   margin-top:10px;
-  font-weight:bold;
-  cursor:pointer;
 }
 
-.recebi{background:#00c853;}
-.gastei{background:#d50000;}
-
-@media(max-width:900px){
-  .container{flex-direction:column;}
-  .sidebar{width:100%;display:flex;justify-content:space-around;}
-  .main{grid-template-columns:1fr;}
+.barra div{
+  height:10px;
+  background:#00c853;
+  border-radius:10px;
 }
+
+/* LISTA */
+.item{
+  margin-top:10px;
+}
+
+/* MOBILE FIRST */
 </style>
 </head>
 
 <body>
 
-<div class="container">
-
-<div class="sidebar">
-  <h2>FluxoZap</h2>
-  <div>Dashboard</div>
-</div>
-
-<div class="main">
-
-<div class="bloco">
-  <div>Saldo Total</div>
+<!-- HEADER -->
+<div class="header">
+  <div>Olá</div>
   <div class="saldo">R$ <span id="saldo">0</span></div>
 </div>
 
-<div class="bloco">
-  <h3>Orçamento</h3>
-  <input id="orcamentoInput" type="number" placeholder="Orçamento mensal">
-  <button onclick="salvarOrcamento()" class="recebi">Salvar</button>
-
-  <div>Usado: R$ <span id="usado">0</span></div>
-  <div>Restante: R$ <span id="restante">0</span></div>
-
-  <div style="background:#333;height:10px;border-radius:10px;">
-    <div id="barra" style="height:10px;background:#00c853;width:0%;"></div>
-  </div>
-
-  <small id="alertaOrcamento"></small>
+<!-- AÇÕES -->
+<div class="actions">
+  <button class="receber" onclick="mostrarEntrada()">Receber</button>
+  <button class="gastar" onclick="mostrarSaida()">Gastar</button>
 </div>
 
-<div class="bloco">
-  <h3>Movimentação</h3>
-
-  <input id="entradaValor" type="number" placeholder="Recebido">
-  <button class="recebi" onclick="addEntrada()">Receber</button>
-
-  <input id="saidaValor" type="number" placeholder="Gasto">
+<!-- INPUT DINÂMICO -->
+<div class="card" id="areaInput" style="display:none;">
+  <input id="valor" type="number" placeholder="Valor">
   <select id="categoria">
     <option>Alimentação</option>
     <option>Transporte</option>
@@ -114,20 +109,34 @@ button{
     <option>Lazer</option>
     <option>Outros</option>
   </select>
-  <button class="gastei" onclick="addSaida()">Gastar</button>
+  <button onclick="confirmar()">Confirmar</button>
 </div>
 
-<div class="bloco">
+<!-- ORÇAMENTO -->
+<div class="card">
+  <h3>Orçamento mensal</h3>
+  <input id="orcamentoInput" placeholder="Definir orçamento">
+  <button onclick="salvarOrcamento()">Salvar</button>
+
+  <div>Usado: R$ <span id="usado">0</span></div>
+  <div>Restante: R$ <span id="restante">0</span></div>
+
+  <div class="barra">
+    <div id="barra"></div>
+  </div>
+
+  <small id="alerta"></small>
+</div>
+
+<!-- GRÁFICO -->
+<div class="card">
   <canvas id="grafico"></canvas>
-  <canvas id="graficoCategoria"></canvas>
 </div>
 
-<div class="bloco">
+<!-- EXTRATO -->
+<div class="card">
   <h3>Extrato</h3>
   <div id="lista"></div>
-</div>
-
-</div>
 </div>
 
 <script type="module">
@@ -146,7 +155,8 @@ const db=getFirestore(app);
 const auth=getAuth(app);
 
 let userId="";
-let chart1,chart2;
+let tipo="";
+let chart;
 let orcamento=0;
 
 onAuthStateChanged(auth,user=>{
@@ -158,46 +168,31 @@ onAuthStateChanged(auth,user=>{
   }
 });
 
+window.mostrarEntrada=()=>{tipo="entrada";areaInput.style.display="block";}
+window.mostrarSaida=()=>{tipo="saida";areaInput.style.display="block";}
+
+window.confirmar=async()=>{
+  let v=parseFloat(valor.value);
+  let cat=categoria.value;
+
+  await addDoc(collection(db,"movimentos"),{
+    tipo,valor:v,categoria:cat,data:new Date().toISOString(),userId
+  });
+
+  areaInput.style.display="none";
+  valor.value="";
+  carregar();
+}
+
 window.salvarOrcamento=async()=>{
-  let v=parseFloat(document.getElementById("orcamentoInput").value);
-  if(!v)return;
-
-  await addDoc(collection(db,"configuracao"),{
-    userId,orcamentoMensal:v
-  });
-
-  carregar();
-}
-
-window.addEntrada=async()=>{
-  let v=parseFloat(document.getElementById("entradaValor").value);
-  if(!v)return;
-
-  await addDoc(collection(db,"movimentos"),{
-    tipo:"entrada",valor:v,data:new Date().toISOString(),userId
-  });
-
-  carregar();
-}
-
-window.addSaida=async()=>{
-  let v=parseFloat(document.getElementById("saidaValor").value);
-  let cat=document.getElementById("categoria").value;
-
-  if(!v)return;
-
-  await addDoc(collection(db,"movimentos"),{
-    tipo:"saida",valor:v,categoria:cat,data:new Date().toISOString(),userId
-  });
-
+  let v=parseFloat(orcamentoInput.value);
+  await addDoc(collection(db,"configuracao"),{userId,orcamentoMensal:v});
   carregar();
 }
 
 async function carregar(){
 
   let saldo=0,entrada=0,saida=0;
-  let categorias={};
-
   let lista=document.getElementById("lista");
   lista.innerHTML="";
 
@@ -208,56 +203,42 @@ async function carregar(){
     let d=doc.data();
 
     if(d.tipo==="entrada"){saldo+=d.valor;entrada+=d.valor;}
-    else{
-      saldo-=d.valor;saida+=d.valor;
-
-      if(!categorias[d.categoria]) categorias[d.categoria]=0;
-      categorias[d.categoria]+=d.valor;
-    }
+    else{saldo-=d.valor;saida+=d.valor;}
 
     lista.innerHTML+=`
-      <div>
-        ${d.tipo==="entrada"?"Entrada":"Saída"} - ${d.categoria||""}
+      <div class="item">
+        ${d.tipo==="entrada"?"Entrada":"Saída"} - ${d.categoria}
         <br>R$ ${d.valor}
       </div>
     `;
   });
 
-  document.getElementById("saldo").innerText=saldo;
+  saldoEl.innerText=saldo;
 
-  // ORÇAMENTO
+  // orçamento
   const q2=query(collection(db,"configuracao"),where("userId","==",userId));
   const snap=await getDocs(q2);
 
   snap.forEach(doc=>orcamento=doc.data().orcamentoMensal);
 
-  let restante=orcamento-saida;
   let perc=orcamento? (saida/orcamento)*100:0;
 
-  document.getElementById("usado").innerText=saida;
-  document.getElementById("restante").innerText=restante;
-  document.getElementById("barra").style.width=perc+"%";
-
-  let alerta=document.getElementById("alertaOrcamento");
+  usado.innerText=saida;
+  restante.innerText=orcamento-saida;
+  barra.style.width=perc+"%";
 
   if(perc>=100) alerta.innerText="Estourou orçamento!";
-  else if(perc>=75) alerta.innerText="75% usado";
+  else if(perc>=75) alerta.innerText="Cuidado: 75% usado";
   else alerta.innerText="";
 
-  // GRAFICO 1
-  if(chart1) chart1.destroy();
-  chart1=new Chart(document.getElementById("grafico"),{
-    type:"doughnut",
-    data:{labels:["Recebido","Gasto"],datasets:[{data:[entrada,saida]}]}
-  });
+  // gráfico
+  if(chart) chart.destroy();
 
-  // GRAFICO 2
-  if(chart2) chart2.destroy();
-  chart2=new Chart(document.getElementById("graficoCategoria"),{
+  chart=new Chart(grafico,{
     type:"doughnut",
     data:{
-      labels:Object.keys(categorias),
-      datasets:[{data:Object.values(categorias)}]
+      labels:["Recebido","Gasto"],
+      datasets:[{data:[entrada,saida]}]
     }
   });
 }
