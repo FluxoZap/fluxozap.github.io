@@ -2,7 +2,12 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>FluxoZap</title>
+
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#6a00ff">
+<link rel="icon" href="https://cdn-icons-png.flaticon.com/512/2331/2331941.png">
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
@@ -25,7 +30,6 @@ body{
 .logo{
  font-size:18px;
  font-weight:bold;
- margin-bottom:5px;
 }
 
 .user{
@@ -97,9 +101,7 @@ button{
 .green{background:#00c853;}
 .red{background:#ff1744;}
 
-canvas{
- height:140px !important;
-}
+canvas{height:140px !important;}
 </style>
 </head>
 
@@ -126,8 +128,6 @@ canvas{
 <div class="container">
 
 <div class="card">
- <h3>Movimentação</h3>
-
  <input id="entradaValor" placeholder="Valor recebido">
  <button class="green" onclick="addEntrada()">Receber</button>
 
@@ -140,9 +140,6 @@ canvas{
   <option>Aluguel</option>
   <option>Funcionários</option>
   <option>Internet</option>
-  <option>Telefone</option>
-  <option>Cartão</option>
-  <option>Impostos</option>
   <option>Outros</option>
  </select>
  <button class="red" onclick="addSaida()">Gastar</button>
@@ -150,11 +147,9 @@ canvas{
 
 <div class="card">
  <canvas id="grafico"></canvas>
- <div id="resumoBanco"></div>
 </div>
 
 <div class="card">
- <h3>Extrato</h3>
  <div id="lista"></div>
 </div>
 
@@ -174,7 +169,7 @@ const app = initializeApp({
 const db=getFirestore(app);
 const auth=getAuth(app);
 
-let empresaId="",userId="",nivel="";
+let empresaId="",userId="";
 let chart;
 
 onAuthStateChanged(auth, async user=>{
@@ -186,8 +181,6 @@ onAuthStateChanged(auth, async user=>{
  let data=docUser.data()||{};
 
  empresaId=data.empresaId||user.uid;
- nivel=data.nivel||"admin";
-
  nomeUsuario.innerText=data.nome||"Usuário";
 
  if(data.foto) fotoPerfil.src=data.foto;
@@ -200,58 +193,29 @@ function carregar(){
 
  onSnapshot(q,(snap)=>{
   let saldo=0,entrada=0,saida=0;
-  let saldoDia=0,saldoMes=0;
-  let categorias={};
 
   lista.innerHTML="";
-
-  let hoje=new Date().toDateString();
-  let mes=new Date().getMonth();
 
   snap.forEach(doc=>{
    let d=doc.data();
    let v=Number(d.valor)||0;
-   let dt=new Date(d.data);
 
-   if(d.tipo==="entrada"){
-    saldo+=v; entrada+=v;
-   }else{
-    saldo-=v; saida+=v;
-    let cat=d.categoria||"Outros";
-    categorias[cat]=(categorias[cat]||0)+v;
-   }
+   if(d.tipo==="entrada"){saldo+=v; entrada+=v;}
+   else{saldo-=v; saida+=v;}
 
-   if(dt.toDateString()===hoje){
-    saldoDia += d.tipo==="entrada"?v:-v;
-   }
-
-   if(dt.getMonth()===mes){
-    saldoMes += d.tipo==="entrada"?v:-v;
-   }
-
-   lista.innerHTML+=`<div>${d.tipo} - R$ ${v} (${d.categoria||""})</div>`;
+   lista.innerHTML+=`<div>${d.tipo} - R$ ${v}</div>`;
   });
 
   saldoTotal.innerText=saldo.toFixed(2);
-  saldoDia.innerText=saldoDia.toFixed(2);
-  saldoMes.innerText=saldoMes.toFixed(2);
 
-  // 🔥 RESUMO TIPO BANCO
-  resumoBanco.innerHTML = `
-   Entrada: R$ ${entrada.toFixed(2)} <br>
-   Saída: R$ ${saida.toFixed(2)} <br>
-   Resultado: R$ ${(entrada-saida).toFixed(2)}
-  `;
-
-  // 🔥 GRÁFICO POR CATEGORIA
   if(chart) chart.destroy();
 
   chart=new Chart(grafico,{
    type:"doughnut",
    data:{
-    labels:Object.keys(categorias),
+    labels:["Entrada","Saída"],
     datasets:[{
-     data:Object.values(categorias)
+     data:[entrada,saida]
     }]
    }
   });
@@ -294,6 +258,15 @@ fotoInput.onchange=async()=>{
  }
 
  reader.readAsDataURL(file);
+}
+</script>
+
+<!-- 🔥 SERVICE WORKER -->
+<script>
+if ('serviceWorker' in navigator) {
+ window.addEventListener('load', () => {
+  navigator.serviceWorker.register('sw.js');
+ });
 }
 </script>
 
