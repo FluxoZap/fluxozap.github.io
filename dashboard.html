@@ -5,6 +5,7 @@
 <title>FluxoZap</title>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
 <style>
 body{
@@ -39,7 +40,6 @@ body{
  width:60px;
  height:60px;
  border-radius:50%;
- object-fit:cover;
 }
 
 .foto-box label{
@@ -53,22 +53,10 @@ body{
  display:flex;
  justify-content:center;
  align-items:center;
- font-size:14px;
  cursor:pointer;
 }
 
-.foto-box input{
- display:none;
-}
-
-.nome{
- font-size:14px;
-}
-
-.saldo{
- font-size:26px;
- font-weight:bold;
-}
+.foto-box input{display:none;}
 
 .container{
  padding:15px;
@@ -84,29 +72,30 @@ body{
 
 input,select{
  width:100%;
- padding:12px;
- margin-top:8px;
+ padding:10px;
+ margin-top:5px;
  background:#2a2a35;
  border:none;
- border-radius:10px;
+ border-radius:8px;
  color:white;
 }
 
 button{
  width:100%;
- padding:12px;
- margin-top:10px;
+ padding:10px;
+ margin-top:5px;
  border:none;
- border-radius:10px;
+ border-radius:8px;
  font-weight:bold;
 }
 
 .green{background:#00c853;}
 .red{background:#ff1744;}
+.gray{background:#333;}
 
-canvas{
- height:120px !important;
-}
+canvas{height:120px !important;}
+
+.item{border-bottom:1px solid #333;padding:5px 0;}
 </style>
 </head>
 
@@ -114,7 +103,7 @@ canvas{
 
 <div class="topo">
  <div>
-  <div class="saldo">R$ <span id="saldoTotal">0</span></div>
+  <div>R$ <span id="saldoTotal">0</span></div>
   <div>Hoje: R$ <span id="saldoDia">0</span></div>
   <div>Mês: R$ <span id="saldoMes">0</span></div>
  </div>
@@ -125,19 +114,17 @@ canvas{
     <label for="fotoInput">+</label>
     <input type="file" id="fotoInput">
   </div>
-  <div class="nome" id="nomeUsuario"></div>
+  <div id="nomeUsuario"></div>
  </div>
 </div>
 
 <div class="container">
 
 <div class="card">
- <h3>Receber</h3>
- <input id="entradaValor" type="number">
- <button class="green" onclick="addEntrada()">Adicionar</button>
+ <input id="entradaValor" placeholder="Valor entrada">
+ <button class="green" onclick="addEntrada()">Receber</button>
 
- <h3>Gastar</h3>
- <input id="saidaValor" type="number">
+ <input id="saidaValor" placeholder="Valor saída">
  <select id="categoria">
   <option>Alimentação</option>
   <option>Gasolina</option>
@@ -151,7 +138,7 @@ canvas{
   <option>Impostos</option>
   <option>Outros</option>
  </select>
- <button class="red" onclick="addSaida()">Adicionar</button>
+ <button class="red" onclick="addSaida()">Gastar</button>
 </div>
 
 <div class="card">
@@ -159,7 +146,14 @@ canvas{
 </div>
 
 <div class="card">
- <h3>Extrato</h3>
+ <h4>Filtro</h4>
+ <input type="date" id="dataInicio">
+ <input type="date" id="dataFim">
+ <button class="gray" onclick="filtrar()">Filtrar</button>
+ <button class="gray" onclick="gerarPDF()">PDF</button>
+</div>
+
+<div class="card">
  <div id="lista"></div>
 </div>
 
@@ -176,139 +170,156 @@ const app = initializeApp({
  projectId:"fluxozap-10ead"
 });
 
-const db = getFirestore(app);
-const auth = getAuth(app);
+const db=getFirestore(app);
+const auth=getAuth(app);
 
 let empresaId="";
+let dados=[];
 let chart;
 
-onAuthStateChanged(auth, async user=>{
+onAuthStateChanged(auth,async user=>{
  if(!user) return location.href="index.html";
 
- const docUser = await getDoc(doc(db,"usuarios",user.uid));
- let data = docUser.data() || {};
+ let docUser=await getDoc(doc(db,"usuarios",user.uid));
+ let data=docUser.data()||{};
 
- // 🔥 EMPRESA
- empresaId = data.empresaId || user.uid;
+ empresaId=data.empresaId||user.uid;
 
- // 🔥 NOME (resolve "teste")
  if(!data.nome){
-  let nome = prompt("Digite seu nome:");
+  let nome=prompt("Digite seu nome:");
   await setDoc(doc(db,"usuarios",user.uid),{nome},{merge:true});
-  data.nome = nome;
+  data.nome=nome;
  }
 
- nomeUsuario.innerText = data.nome;
+ nomeUsuario.innerText=data.nome;
 
- // 🔥 FOTO
- if(data.foto){
-  fotoPerfil.src = data.foto;
- }
+ if(data.foto) fotoPerfil.src=data.foto;
 
  carregar();
 });
 
 function carregar(){
- const q = query(collection(db,"movimentos"),where("empresaId","==",empresaId));
+ const q=query(collection(db,"movimentos"),where("empresaId","==",empresaId));
 
- onSnapshot(q,(snapshot)=>{
-
+ onSnapshot(q,(snap)=>{
   let saldo=0,entrada=0,saida=0;
   let saldoDia=0,saldoMes=0;
 
+  let categorias={};
+
   lista.innerHTML="";
+  dados=[];
 
   let hoje=new Date().toDateString();
   let mes=new Date().getMonth();
 
-  snapshot.forEach(doc=>{
+  snap.forEach(doc=>{
    let d=doc.data();
    let v=Number(d.valor)||0;
    let tipo=(d.tipo||"").toLowerCase();
    let data=new Date(d.data);
 
-   if(tipo==="entrada"){
-    saldo+=v; entrada+=v;
-   } else {
-    saldo-=v; saida+=v;
+   dados.push(d);
+
+   if(tipo==="entrada"){saldo+=v;entrada+=v;}
+   else{
+    saldo-=v;saida+=v;
+
+    let cat=d.categoria||"Outros";
+    categorias[cat]=(categorias[cat]||0)+v;
    }
 
    if(data.toDateString()===hoje){
-    saldoDia += tipo==="entrada"?v:-v;
+    saldoDia+=tipo==="entrada"?v:-v;
    }
 
    if(data.getMonth()===mes){
-    saldoMes += tipo==="entrada"?v:-v;
+    saldoMes+=tipo==="entrada"?v:-v;
    }
 
-   lista.innerHTML+=`<div>${tipo} - R$ ${v}</div>`;
+   lista.innerHTML+=`<div class="item">${tipo} - R$ ${v} (${d.categoria||""})</div>`;
   });
 
   saldoTotal.innerText=saldo.toFixed(2);
   saldoDia.innerText=saldoDia.toFixed(2);
   saldoMes.innerText=saldoMes.toFixed(2);
 
-  if(chart) chart.destroy();
-
-  chart = new Chart(grafico,{
-   type:"doughnut",
-   data:{
-    labels:["Entrada","Saída"],
-    datasets:[{
-     data:[entrada,saida],
-     backgroundColor:["#00c853","#ff1744"]
-    }]
-   }
-  });
+  atualizarGrafico(categorias);
  });
 }
 
-// 🔥 ENTRADA
-window.addEntrada=async()=>{
- let v=Number(entradaValor.value);
- if(!v) return alert("Digite um valor");
+function atualizarGrafico(categorias){
+ if(chart) chart.destroy();
 
+ chart=new Chart(grafico,{
+  type:"doughnut",
+  data:{
+   labels:Object.keys(categorias),
+   datasets:[{
+    data:Object.values(categorias),
+    backgroundColor:["red","orange","yellow","green","blue","purple"]
+   }]
+  }
+ });
+}
+
+window.addEntrada=async()=>{
  await addDoc(collection(db,"movimentos"),{
   tipo:"entrada",
-  valor:v,
+  valor:Number(entradaValor.value),
   data:new Date().toISOString(),
   empresaId
  });
-
- entradaValor.value="";
 }
 
-// 🔥 SAÍDA
 window.addSaida=async()=>{
- let v=Number(saidaValor.value);
- if(!v) return alert("Digite um valor");
-
  await addDoc(collection(db,"movimentos"),{
   tipo:"saida",
-  valor:v,
+  valor:Number(saidaValor.value),
   categoria:categoria.value,
   data:new Date().toISOString(),
   empresaId
  });
-
- saidaValor.value="";
 }
 
-// 🔥 FOTO SEM STORAGE (FUNCIONA 100%)
-fotoInput.onchange = async()=>{
- let file = fotoInput.files[0];
- if(!file) return;
+window.filtrar=()=>{
+ lista.innerHTML="";
+ let i=new Date(dataInicio.value);
+ let f=new Date(dataFim.value);
 
- const reader = new FileReader();
+ dados.forEach(d=>{
+  let dt=new Date(d.data);
+  if(dt>=i && dt<=f){
+   lista.innerHTML+=`<div>${d.tipo} - R$ ${d.valor}</div>`;
+  }
+ });
+}
 
- reader.onload = async function(e){
-  let base64 = e.target.result;
+window.gerarPDF=()=>{
+ const { jsPDF } = window.jspdf;
+ let doc=new jsPDF();
+ let y=10;
+
+ dados.forEach(d=>{
+  doc.text(`${d.tipo} - R$ ${d.valor}`,10,y);
+  y+=10;
+ });
+
+ doc.save("extrato.pdf");
+}
+
+fotoInput.onchange=async()=>{
+ let file=fotoInput.files[0];
+ const reader=new FileReader();
+
+ reader.onload=async e=>{
+  let base64=e.target.result;
 
   await setDoc(doc(db,"usuarios",auth.currentUser.uid),{
-   foto: base64
+   foto:base64
   },{merge:true});
 
-  fotoPerfil.src = base64;
+  fotoPerfil.src=base64;
  }
 
  reader.readAsDataURL(file);
