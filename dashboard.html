@@ -22,11 +22,16 @@ body{
  align-items:center;
 }
 
+.logo{
+ font-size:18px;
+ font-weight:bold;
+ margin-bottom:5px;
+}
+
 .user{
  display:flex;
  flex-direction:column;
  align-items:center;
- gap:5px;
 }
 
 .foto-box{
@@ -93,7 +98,7 @@ button{
 .red{background:#ff1744;}
 
 canvas{
- height:120px !important;
+ height:140px !important;
 }
 </style>
 </head>
@@ -102,7 +107,8 @@ canvas{
 
 <div class="topo">
  <div>
-  <div class="saldo">R$ <span id="saldoTotal">0</span></div>
+  <div class="logo">FluxoZap 💳</div>
+  <div>Saldo: R$ <span id="saldoTotal">0</span></div>
   <div>Hoje: R$ <span id="saldoDia">0</span></div>
   <div>Mês: R$ <span id="saldoMes">0</span></div>
  </div>
@@ -120,12 +126,12 @@ canvas{
 <div class="container">
 
 <div class="card">
- <h3>Receber</h3>
- <input id="entradaValor">
- <button class="green" onclick="addEntrada()">Adicionar</button>
+ <h3>Movimentação</h3>
 
- <h3>Gastar</h3>
- <input id="saidaValor">
+ <input id="entradaValor" placeholder="Valor recebido">
+ <button class="green" onclick="addEntrada()">Receber</button>
+
+ <input id="saidaValor" placeholder="Valor gasto">
  <select id="categoria">
   <option>Alimentação</option>
   <option>Gasolina</option>
@@ -139,24 +145,12 @@ canvas{
   <option>Impostos</option>
   <option>Outros</option>
  </select>
- <button class="red" onclick="addSaida()">Adicionar</button>
+ <button class="red" onclick="addSaida()">Gastar</button>
 </div>
 
 <div class="card">
  <canvas id="grafico"></canvas>
-</div>
-
-<!-- 🔥 NOVOS RECURSOS SEM MEXER NO LAYOUT -->
-<div class="card" id="metaCard">
- <h3>Meta Mensal</h3>
- <input id="metaValor">
- <button onclick="salvarMeta()">Salvar</button>
- <div id="metaStatus"></div>
-</div>
-
-<div class="card" id="adminCard" style="display:none">
- <h3>Resumo Funcionários</h3>
- <div id="listaFuncionarios"></div>
+ <div id="resumoBanco"></div>
 </div>
 
 <div class="card">
@@ -181,7 +175,7 @@ const db=getFirestore(app);
 const auth=getAuth(app);
 
 let empresaId="",userId="",nivel="";
-let chart, dados=[], meta=0;
+let chart;
 
 onAuthStateChanged(auth, async user=>{
  if(!user) return location.href="index.html";
@@ -202,15 +196,13 @@ onAuthStateChanged(auth, async user=>{
 });
 
 function carregar(){
- let q = nivel==="admin"
-  ? query(collection(db,"movimentos"),where("empresaId","==",empresaId))
-  : query(collection(db,"movimentos"),where("userId","==",userId));
+ let q = query(collection(db,"movimentos"),where("empresaId","==",empresaId));
 
  onSnapshot(q,(snap)=>{
   let saldo=0,entrada=0,saida=0;
   let saldoDia=0,saldoMes=0;
+  let categorias={};
 
-  dados=[];
   lista.innerHTML="";
 
   let hoje=new Date().toDateString();
@@ -221,10 +213,13 @@ function carregar(){
    let v=Number(d.valor)||0;
    let dt=new Date(d.data);
 
-   dados.push(d);
-
-   if(d.tipo==="entrada"){saldo+=v; entrada+=v;}
-   else{saldo-=v; saida+=v;}
+   if(d.tipo==="entrada"){
+    saldo+=v; entrada+=v;
+   }else{
+    saldo-=v; saida+=v;
+    let cat=d.categoria||"Outros";
+    categorias[cat]=(categorias[cat]||0)+v;
+   }
 
    if(dt.toDateString()===hoje){
     saldoDia += d.tipo==="entrada"?v:-v;
@@ -241,48 +236,34 @@ function carregar(){
   saldoDia.innerText=saldoDia.toFixed(2);
   saldoMes.innerText=saldoMes.toFixed(2);
 
-  if(meta){
-   let p=(saldoMes/meta)*100;
-   metaStatus.innerText="Progresso: "+p.toFixed(1)+"%";
-  }
+  // 🔥 RESUMO TIPO BANCO
+  resumoBanco.innerHTML = `
+   Entrada: R$ ${entrada.toFixed(2)} <br>
+   Saída: R$ ${saida.toFixed(2)} <br>
+   Resultado: R$ ${(entrada-saida).toFixed(2)}
+  `;
 
-  if(nivel==="admin"){
-   adminCard.style.display="block";
-
-   let resumo={};
-
-   dados.forEach(d=>{
-    resumo[d.userId]=(resumo[d.userId]||0)+(d.tipo==="entrada"?d.valor:-d.valor);
-   });
-
-   listaFuncionarios.innerHTML="";
-   Object.keys(resumo).forEach(id=>{
-    listaFuncionarios.innerHTML+=`<div>${id} → R$ ${resumo[id].toFixed(2)}</div>`;
-   });
-  }
-
+  // 🔥 GRÁFICO POR CATEGORIA
   if(chart) chart.destroy();
 
   chart=new Chart(grafico,{
    type:"doughnut",
    data:{
-    labels:["Entrada","Saída"],
+    labels:Object.keys(categorias),
     datasets:[{
-     data:[entrada,saida],
-     backgroundColor:["#00c853","#ff1744"]
+     data:Object.values(categorias)
     }]
    }
   });
  });
 }
 
-window.salvarMeta=()=> meta=Number(metaValor.value);
-
 window.addEntrada=async()=>{
  await addDoc(collection(db,"movimentos"),{
   tipo:"entrada",
   valor:Number(entradaValor.value),
-  empresaId,userId,
+  empresaId,
+  userId,
   data:new Date().toISOString()
  });
 }
@@ -292,7 +273,8 @@ window.addSaida=async()=>{
   tipo:"saida",
   valor:Number(saidaValor.value),
   categoria:categoria.value,
-  empresaId,userId,
+  empresaId,
+  userId,
   data:new Date().toISOString()
  });
 }
