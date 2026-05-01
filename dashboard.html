@@ -23,13 +23,13 @@ body{
  align-items:center;
 }
 
-.user-box{
+.user{
  display:flex;
  align-items:center;
  gap:10px;
 }
 
-.user-box img{
+.user img{
  width:50px;
  height:50px;
  border-radius:50%;
@@ -76,7 +76,6 @@ button{
 .gray{background:#333;}
 
 canvas{
- width:100% !important;
  height:120px !important;
 }
 
@@ -97,7 +96,7 @@ canvas{
   <div>Mês: R$ <span id="saldoMes">0</span></div>
  </div>
 
- <div class="user-box">
+ <div class="user">
   <input type="file" id="fotoInput">
   <img id="fotoPerfil">
  </div>
@@ -124,7 +123,6 @@ canvas{
  <h3>Meta mensal</h3>
  <input id="metaValor">
  <button onclick="salvarMeta()">Salvar</button>
-
  <p>Usado: R$ <span id="usado">0</span></p>
  <p>Restante: R$ <span id="restante">0</span></p>
 </div>
@@ -171,7 +169,6 @@ onAuthStateChanged(auth, async user=>{
  const userData = userDoc.data();
 
  empresaId = userData.empresaId;
-
  nomeUsuario.innerText = userData.email;
 
  if(userData.foto){
@@ -198,30 +195,30 @@ function iniciar(){
   snapshot.forEach(doc=>{
    let d=doc.data();
    let valor = Number(d.valor)||0;
-   let tipo = d.tipo;
+   let tipo = (d.tipo||"").toLowerCase();
    let data = new Date(d.data);
 
    dados.push(d);
 
-   if(tipo==="Entrada"){
+   if(tipo==="entrada"){
     saldo += valor;
     entrada += valor;
-   }else{
+   }else if(tipo==="saída" || tipo==="saida"){
     saldo -= valor;
     saida += valor;
    }
 
    if(data.toDateString()===hoje){
-    saldoDia += tipo==="Entrada"?valor:-valor;
+    saldoDia += tipo==="entrada"?valor:-valor;
    }
 
    if(data.getMonth()===mes){
-    saldoMes += tipo==="Entrada"?valor:-valor;
+    saldoMes += tipo==="entrada"?valor:-valor;
    }
 
    lista.innerHTML += `
    <div class="item">
-    ${tipo} - R$ ${valor}
+    ${tipo.toUpperCase()} - R$ ${valor}
    </div>`;
   });
 
@@ -239,11 +236,13 @@ window.addEntrada = async()=>{
  if(!v) return;
 
  await addDoc(collection(db,"movimentos"),{
-  tipo:"Entrada",
+  tipo:"entrada",
   valor:v,
   data:new Date().toISOString(),
   empresaId
  });
+
+ entradaValor.value="";
 }
 
 window.addSaida = async()=>{
@@ -251,11 +250,13 @@ window.addSaida = async()=>{
  if(!v) return;
 
  await addDoc(collection(db,"movimentos"),{
-  tipo:"Saída",
+  tipo:"saida",
   valor:v,
   data:new Date().toISOString(),
   empresaId
  });
+
+ saidaValor.value="";
 }
 
 function atualizarGrafico(ent,sai){
