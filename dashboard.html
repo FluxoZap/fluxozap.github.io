@@ -27,11 +27,6 @@ body{
   background:#15171c;
   padding:20px;
   border-radius:15px;
-  transition:0.2s;
-}
-
-.bloco:hover{
-  transform:translateY(-5px);
 }
 
 .saldo{
@@ -62,17 +57,14 @@ button{
 .recebi{background:#00c853;}
 .gastei{background:#ff1744;}
 
-canvas{
-  max-height:250px;
-}
-
 .item{
   padding:10px;
   border-bottom:1px solid #333;
 }
 
-.entrada{color:#00c853;}
-.saida{color:#ff1744;}
+canvas{
+  max-height:250px;
+}
 
 @media(max-width:900px){
   .container{grid-template-columns:1fr;}
@@ -111,11 +103,11 @@ canvas{
 </div>
 
 <div class="bloco">
-  <h3>Filtro de Extrato</h3>
+  <h3>Filtro</h3>
   <input type="date" id="dataInicio">
   <input type="date" id="dataFim">
   <button onclick="filtrar()">Filtrar</button>
-  <button onclick="gerarPDF()">Gerar PDF</button>
+  <button onclick="gerarPDF()">Exportar PDF</button>
 </div>
 
 <div class="bloco">
@@ -205,18 +197,23 @@ async function carregar(){
     }
 
     lista.innerHTML+=`
-      <div class="item ${d.tipo}">
+      <div class="item">
         ${d.tipo==="entrada"?"Entrada":"Saída"} - ${d.categoria||""}
         <br>R$ ${d.valor} | ${dataFormat}
       </div>
     `;
   });
 
-  saldoEl.innerText=saldo;
+  document.getElementById("saldo").innerText=saldo;
 
-  if(chart) chart.destroy();
+  // 🔥 GARANTIA DO GRÁFICO
+  const ctx = document.getElementById("grafico").getContext("2d");
 
-  chart=new Chart(grafico,{
+  if(chart){
+    chart.destroy();
+  }
+
+  chart = new Chart(ctx,{
     type:"doughnut",
     data:{
       labels:["Recebido","Gasto"],
@@ -224,6 +221,10 @@ async function carregar(){
         data:[entrada,saida],
         backgroundColor:["#00c853","#ff1744"]
       }]
+    },
+    options:{
+      responsive:true,
+      animation:{duration:800}
     }
   });
 }
@@ -239,7 +240,7 @@ window.filtrar=()=>{
 
     if(data>=inicio && data<=fim){
       lista.innerHTML+=`
-        <div class="item ${d.tipo}">
+        <div class="item">
           ${d.tipo==="entrada"?"Entrada":"Saída"}
           <br>R$ ${d.valor}
         </div>
