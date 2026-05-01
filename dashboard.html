@@ -18,11 +18,13 @@ body{
 .topo{
  background:linear-gradient(135deg,#6a00ff,#8e2de2);
  padding:20px;
+ display:flex;
+ align-items:center;
+ justify-content:space-between;
 }
 
 .saldo{
- font-size:32px;
- font-weight:bold;
+ font-size:28px;
 }
 
 .container{
@@ -60,196 +62,180 @@ button{
 .red{background:#ff1744;}
 .gray{background:#333;}
 
-.item{
- border-bottom:1px solid #333;
- padding:8px 0;
+canvas{
+ max-height:120px;
 }
 
-canvas{max-height:200px;}
+img{
+ border-radius:50%;
+}
 </style>
 </head>
 
 <body>
 
 <div class="topo">
+ <div>
   <div id="usuario"></div>
   <div class="saldo">R$ <span id="saldoTotal">0</span></div>
   <div>Hoje: R$ <span id="saldoDia">0</span></div>
   <div>Mês: R$ <span id="saldoMes">0</span></div>
+ </div>
+
+ <div>
+  <input type="file" id="fotoInput">
+  <img id="fotoPerfil" width="50">
+ </div>
 </div>
 
 <div class="container">
 
 <div class="card">
-  <h3>Receber</h3>
-  <input id="entradaValor" type="number">
-  <button class="green" onclick="addEntrada()">Adicionar</button>
+ <h3>Receber</h3>
+ <input id="entradaValor">
+ <button class="green" onclick="addEntrada()">Adicionar</button>
 
-  <h3>Gastar</h3>
-  <input id="saidaValor" type="number">
-  <select id="categoria">
-    <option>Alimentação</option>
-    <option>Transporte</option>
-    <option>Contas</option>
-    <option>Lazer</option>
-    <option>Outros</option>
-  </select>
-  <button class="red" onclick="addSaida()">Adicionar</button>
+ <h3>Gastar</h3>
+ <input id="saidaValor">
+ <button class="red" onclick="addSaida()">Adicionar</button>
 </div>
 
 <div class="card">
-  <h3>Meta mensal</h3>
-  <input id="metaValor">
-  <button onclick="salvarMeta()">Salvar</button>
-
-  <p>Usado: R$ <span id="usado">0</span></p>
-  <p>Restante: R$ <span id="restante">0</span></p>
+ <canvas id="grafico"></canvas>
 </div>
 
 <div class="card">
-  <h3>Filtro</h3>
-  <input type="date" id="dataInicio">
-  <input type="date" id="dataFim">
-  <button class="gray" onclick="filtrar()">Filtrar</button>
-  <button class="gray" onclick="gerarPDF()">Gerar PDF</button>
+ <h3>Meta mensal</h3>
+ <input id="metaValor">
+ <button onclick="salvarMeta()">Salvar</button>
+
+ <p>Usado: R$ <span id="usado">0</span></p>
+ <p>Restante: R$ <span id="restante">0</span></p>
 </div>
 
 <div class="card">
-  <h3>Gráfico</h3>
-  <canvas id="grafico"></canvas>
+ <h3>Filtro</h3>
+ <input type="date" id="dataInicio">
+ <input type="date" id="dataFim">
+ <button onclick="filtrar()">Filtrar</button>
+ <button onclick="gerarPDF()">PDF</button>
 </div>
 
 <div class="card">
-  <h3>Extrato</h3>
-  <div id="lista"></div>
+ <h3>Extrato</h3>
+ <div id="lista"></div>
 </div>
 
 </div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getFirestore, collection, addDoc, onSnapshot, query, where } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getFirestore, collection, addDoc, onSnapshot, query, where, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
 
-const firebaseConfig={
+const app=initializeApp({
  apiKey:"AIzaSyAh0Qi4lm-ZXQLe4YAca8wYbp5kcU6lY3I",
  authDomain:"fluxozap-10ead.firebaseapp.com",
  projectId:"fluxozap-10ead"
-};
-
-const app=initializeApp(firebaseConfig);
-const db=getFirestore(app);
-const auth=getAuth(app);
-
-let chart;
-let dados=[];
-
-onAuthStateChanged(auth,user=>{
- if(user){
-  usuario.innerText=user.email;
-  iniciar(user.uid);
- }else{
-  window.location.href="index.html";
- }
 });
 
-function iniciar(uid){
- const q=query(collection(db,"movimentos"),where("userId","==",uid));
+const db=getFirestore(app);
+const auth=getAuth(app);
+const storage=getStorage(app);
+
+let empresaId="";
+let dados=[];
+let chart;
+
+onAuthStateChanged(auth,async user=>{
+ if(!user) return location.href="index.html";
+
+ const userDoc=await getDoc(doc(db,"usuarios",user.uid));
+ const userData=userDoc.data();
+
+ empresaId=userData.empresaId;
+ usuario.innerText=userData.email;
+
+ iniciar();
+});
+
+function iniciar(){
+ const q=query(collection(db,"movimentos"),where("empresaId","==",empresaId));
 
  onSnapshot(q,(snapshot)=>{
 
-  let saldo=0;
-  let entrada=0;
-  let saida=0;
-  let saldoDia=0;
-  let saldoMes=0;
+  let saldo=0,entrada=0,saida=0;
+  let saldoDia=0,saldoMes=0;
 
-  dados=[];
   lista.innerHTML="";
+  dados=[];
 
   let hoje=new Date().toDateString();
-  let mesAtual=new Date().getMonth();
+  let mes=new Date().getMonth();
 
   snapshot.forEach(doc=>{
    let d=doc.data();
-   let valor = Number(d.valor) || 0;
-   let data = new Date(d.data);
+   let valor=Number(d.valor)||0;
+   let tipo=d.tipo;
+   let data=new Date(d.data);
 
    dados.push(d);
 
-   if(d.tipo==="Entrada"){
-    saldo += valor;
-    entrada += valor;
-   }else{
-    saldo -= valor;
-    saida += valor;
-   }
+   if(tipo==="Entrada"){saldo+=valor;entrada+=valor;}
+   else{saldo-=valor;saida+=valor;}
 
    if(data.toDateString()===hoje){
-    saldoDia += d.tipo==="Entrada"?valor:-valor;
+    saldoDia += tipo==="Entrada"?valor:-valor;
    }
 
-   if(data.getMonth()===mesAtual){
-    saldoMes += d.tipo==="Entrada"?valor:-valor;
+   if(data.getMonth()===mes){
+    saldoMes += tipo==="Entrada"?valor:-valor;
    }
 
-   lista.innerHTML += `
-   <div class="item">
-     ${d.tipo} - R$ ${valor} <br>
-     ${data.toLocaleDateString()}
-   </div>`;
+   lista.innerHTML+=`<div>${tipo} R$ ${valor}</div>`;
   });
 
-  saldoTotal.innerText = saldo;
-  saldoDia.innerText = saldoDia;
-  saldoMes.innerText = saldoMes;
+  saldoTotal.innerText=saldo.toFixed(2);
+  saldoDia.innerText=saldoDia.toFixed(2);
+  saldoMes.innerText=saldoMes.toFixed(2);
 
   atualizarGrafico(entrada,saida);
   atualizarMeta(saida);
  });
 }
 
-window.addEntrada = async()=>{
- let v = Number(entradaValor.value);
- if(!v) return;
+window.addEntrada=async()=>{
+ let v=Number(entradaValor.value);
+ if(!v)return;
 
  await addDoc(collection(db,"movimentos"),{
   tipo:"Entrada",
   valor:v,
   data:new Date().toISOString(),
-  userId:auth.currentUser.uid
+  empresaId
  });
-
- entradaValor.value="";
 }
 
-window.addSaida = async()=>{
- let v = Number(saidaValor.value);
- if(!v) return;
+window.addSaida=async()=>{
+ let v=Number(saidaValor.value);
+ if(!v)return;
 
  await addDoc(collection(db,"movimentos"),{
   tipo:"Saída",
   valor:v,
   data:new Date().toISOString(),
-  userId:auth.currentUser.uid
+  empresaId
  });
-
- saidaValor.value="";
 }
 
-function atualizarGrafico(ent, sai){
- const ctx=document.getElementById("grafico");
-
- if(chart) chart.destroy();
-
- chart=new Chart(ctx,{
+function atualizarGrafico(ent,sai){
+ if(chart)chart.destroy();
+ chart=new Chart(grafico,{
   type:"doughnut",
   data:{
-   labels:["Recebido","Gasto"],
-   datasets:[{
-    data:[ent,sai],
-    backgroundColor:["#00c853","#ff1744"]
-   }]
+   labels:["Entrada","Saída"],
+   datasets:[{data:[ent,sai],backgroundColor:["green","red"]}]
   }
  });
 }
@@ -259,46 +245,30 @@ window.salvarMeta=()=>{
 }
 
 function atualizarMeta(gasto){
- let meta = Number(localStorage.getItem("meta")) || 0;
-
- usado.innerText = gasto;
- restante.innerText = meta - gasto;
-
- if(meta > 0 && gasto >= meta * 0.75){
-  alert("⚠️ Você já gastou 75% da meta!");
- }
-}
-
-window.filtrar=()=>{
- lista.innerHTML="";
- let i=new Date(dataInicio.value);
- let f=new Date(dataFim.value);
-
- dados.forEach(d=>{
-  let dt=new Date(d.data);
-  let valor = Number(d.valor) || 0;
-
-  if(dt>=i && dt<=f){
-   lista.innerHTML += `
-   <div class="item">
-    ${d.tipo} - R$ ${valor}
-   </div>`;
-  }
- });
+ let meta=Number(localStorage.getItem("meta"))||0;
+ usado.innerText=gasto;
+ restante.innerText=meta-gasto;
 }
 
 window.gerarPDF=()=>{
  const { jsPDF } = window.jspdf;
- const doc = new jsPDF();
-
+ let doc=new jsPDF();
  let y=10;
 
  dados.forEach(d=>{
-  doc.text(`${d.tipo} - R$ ${d.valor}`,10,y);
+  doc.text(`${d.tipo} R$ ${d.valor}`,10,y);
   y+=10;
  });
 
  doc.save("extrato.pdf");
+}
+
+fotoInput.onchange=async()=>{
+ let file=fotoInput.files[0];
+ let r=ref(storage,"foto"+auth.currentUser.uid);
+ await uploadBytes(r,file);
+ let url=await getDownloadURL(r);
+ fotoPerfil.src=url;
 }
 </script>
 
