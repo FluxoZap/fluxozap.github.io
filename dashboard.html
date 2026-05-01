@@ -188,15 +188,24 @@ onAuthStateChanged(auth, async user=>{
  if(!user) return location.href="index.html";
 
  const docUser = await getDoc(doc(db,"usuarios",user.uid));
- const data = docUser.data();
+ let data = docUser.data() || {};
 
- empresaId = data.empresaId;
+ // 🔥 CORREÇÃO EMPRESA
+ empresaId = data.empresaId || user.uid;
 
- // ✔ nome correto
- nomeUsuario.innerText = data.nome || data.email;
+ // 🔥 CORREÇÃO NOME
+ if(!data.nome){
+  let nome = prompt("Digite seu nome:");
+  await setDoc(doc(db,"usuarios",user.uid),{nome},{merge:true});
+  data.nome = nome;
+ }
 
- // ✔ foto
- if(data.foto) fotoPerfil.src = data.foto;
+ nomeUsuario.innerText = data.nome;
+
+ // 🔥 FOTO
+ if(data.foto){
+  fotoPerfil.src = data.foto;
+ }
 
  carregar();
 });
@@ -211,8 +220,8 @@ function carregar(){
 
   lista.innerHTML="";
 
-  let hoje = new Date().toDateString();
-  let mes = new Date().getMonth();
+  let hoje=new Date().toDateString();
+  let mes=new Date().getMonth();
 
   snapshot.forEach(doc=>{
    let d=doc.data();
@@ -237,11 +246,11 @@ function carregar(){
    lista.innerHTML+=`<div>${tipo} - R$ ${v}</div>`;
   });
 
-  saldoTotal.innerText = saldo.toFixed(2);
-  saldoDia.innerText = saldoDia.toFixed(2);
-  saldoMes.innerText = saldoMes.toFixed(2);
+  saldoTotal.innerText=saldo.toFixed(2);
+  saldoDia.innerText=saldoDia.toFixed(2);
+  saldoMes.innerText=saldoMes.toFixed(2);
 
-  // ✔ gráfico funcionando
+  // 🔥 GRÁFICO
   if(chart) chart.destroy();
 
   chart = new Chart(grafico,{
@@ -257,26 +266,37 @@ function carregar(){
  });
 }
 
+// 🔥 FUNÇÕES CORRIGIDAS
 window.addEntrada=async()=>{
+ let v=Number(entradaValor.value);
+ if(!v) return alert("Digite um valor");
+
  await addDoc(collection(db,"movimentos"),{
   tipo:"entrada",
-  valor:Number(entradaValor.value),
+  valor:v,
   data:new Date().toISOString(),
   empresaId
  });
+
+ entradaValor.value="";
 }
 
 window.addSaida=async()=>{
+ let v=Number(saidaValor.value);
+ if(!v) return alert("Digite um valor");
+
  await addDoc(collection(db,"movimentos"),{
   tipo:"saida",
-  valor:Number(saidaValor.value),
+  valor:v,
   categoria:categoria.value,
   data:new Date().toISOString(),
   empresaId
  });
+
+ saidaValor.value="";
 }
 
-// ✔ upload estilo Instagram
+// 🔥 FOTO FUNCIONANDO
 fotoInput.onchange=async()=>{
  let file=fotoInput.files[0];
  if(!file) return;
