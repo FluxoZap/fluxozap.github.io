@@ -175,7 +175,22 @@ input{
 
 <!-- GRAFICO + EXTRATO -->
 <div class="bloco">
-  <canvas id="grafico"></canvas>
+  <h3>Orçamento mensal</h3>
+
+  <input id="orcamentoInput" type="number" placeholder="Definir orçamento mensal">
+  <button onclick="salvarOrcamento()" class="recebi">Salvar</button>
+
+  <div style="margin-top:15px;">
+    <div>Usado: R$ <span id="usado">0</span></div>
+    <div>Restante: R$ <span id="restante">0</span></div>
+  </div>
+
+  <div style="background:#333;height:10px;border-radius:10px;margin-top:10px;">
+    <div id="barra" style="height:10px;background:#00c853;width:0%;border-radius:10px;"></div>
+  </div>
+
+  <small id="alertaOrcamento"></small>
+</div>
   <div id="percentual"></div>
   <hr style="border-color:#333;">
   <div id="lista"></div>
