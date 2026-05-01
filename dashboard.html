@@ -5,6 +5,7 @@
 <title>FluxoZap</title>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
 <style>
 body{
@@ -27,8 +28,6 @@ body{
   border-radius:15px;
 }
 
-h2{margin:0}
-
 input,select{
   width:100%;
   padding:10px;
@@ -50,6 +49,7 @@ button{
 
 .green{background:#00c853;}
 .red{background:#ff1744;}
+.gray{background:#333;}
 
 canvas{max-height:200px;}
 </style>
@@ -96,6 +96,14 @@ canvas{max-height:200px;}
 </div>
 
 <div class="card">
+  <h3>Filtro</h3>
+  <input type="date" id="dataInicio">
+  <input type="date" id="dataFim">
+  <button class="gray" onclick="filtrar()">Filtrar</button>
+  <button class="gray" onclick="gerarPDF()">Exportar PDF</button>
+</div>
+
+<div class="card">
   <canvas id="grafico"></canvas>
 </div>
 
@@ -122,6 +130,7 @@ const db=getFirestore(app);
 const auth=getAuth(app);
 
 let chart;
+let dados=[];
 
 onAuthStateChanged(auth,user=>{
  if(user){
@@ -137,7 +146,7 @@ window.addEntrada=async()=>{
  if(!v)return;
 
  await addDoc(collection(db,"movimentos"),{
-  tipo:"entrada",
+  tipo:"Entrada",
   valor:v,
   data:new Date().toISOString(),
   userId:auth.currentUser.uid
@@ -149,7 +158,7 @@ window.addSaida=async()=>{
  if(!v)return;
 
  await addDoc(collection(db,"movimentos"),{
-  tipo:"saida",
+  tipo:"Saída",
   valor:v,
   data:new Date().toISOString(),
   userId:auth.currentUser.uid
@@ -173,12 +182,14 @@ function carregar(uid){
   let saldoMes=0;
 
   lista.innerHTML="";
+  dados=[];
 
   snapshot.forEach(doc=>{
    let d=doc.data();
    let data=new Date(d.data);
+   dados.push(d);
 
-   if(d.tipo==="entrada"){
+   if(d.tipo==="Entrada"){
     saldo+=d.valor;
     entrada+=d.valor;
    }else{
@@ -187,11 +198,11 @@ function carregar(uid){
    }
 
    if(data.toDateString()===hoje){
-    saldoDia += d.tipo==="entrada"?d.valor:-d.valor;
+    saldoDia += d.tipo==="Entrada"?d.valor:-d.valor;
    }
 
    if(data.getMonth()===mesAtual){
-    saldoMes += d.tipo==="entrada"?d.valor:-d.valor;
+    saldoMes += d.tipo==="Entrada"?d.valor:-d.valor;
    }
 
    lista.innerHTML+=`
@@ -229,10 +240,43 @@ function atualizarGrafico(ent, sai){
 }
 
 function atualizarMeta(gasto){
- let meta=localStorage.getItem("meta")||0;
+ let meta=parseFloat(localStorage.getItem("meta"))||0;
 
  usado.innerText=gasto;
  restante.innerText=meta-gasto;
+
+ if(meta>0 && gasto>=meta*0.75){
+  alert("⚠️ Você já gastou 75% da sua meta!");
+ }
+}
+
+window.filtrar=()=>{
+ lista.innerHTML="";
+ let inicio=new Date(dataInicio.value);
+ let fim=new Date(dataFim.value);
+
+ dados.forEach(d=>{
+  let dt=new Date(d.data);
+  if(dt>=inicio && dt<=fim){
+   lista.innerHTML+=`
+   <div>${d.tipo} - R$ ${d.valor}</div><hr>
+   `;
+  }
+ });
+}
+
+window.gerarPDF=()=>{
+ const { jsPDF } = window.jspdf;
+ const doc = new jsPDF();
+
+ let y=10;
+
+ dados.forEach(d=>{
+  doc.text(`${d.tipo} - R$ ${d.valor}`,10,y);
+  y+=10;
+ });
+
+ doc.save("extrato.pdf");
 }
 </script>
 
