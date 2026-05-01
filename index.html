@@ -50,6 +50,7 @@ button{
 <div class="box">
 <h2>FluxoZap 💳</h2>
 
+<input id="nome" placeholder="Nome completo">
 <input id="email" placeholder="Email">
 <input id="senha" type="password" placeholder="Senha">
 
@@ -73,24 +74,24 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-const firebaseConfig={
+const app = initializeApp({
  apiKey:"AIzaSyAh0Qi4lm-ZXQLe4YAca8wYbp5kcU6lY3I",
  authDomain:"fluxozap-10ead.firebaseapp.com",
  projectId:"fluxozap-10ead"
-};
+});
 
-const app=initializeApp(firebaseConfig);
-const auth=getAuth(app);
-const db=getFirestore(app);
+const auth = getAuth(app);
+const db = getFirestore(app);
 
 window.cadastrar = async()=>{
  let user = await createUserWithEmailAndPassword(auth,email.value,senha.value);
 
  let empresaId = tipoConta.value==="empresa"
-   ? (nivel.value==="admin" ? user.user.uid : prompt("Digite o ID da empresa"))
+   ? (nivel.value==="admin" ? user.user.uid : prompt("ID da empresa"))
    : user.user.uid;
 
  await setDoc(doc(db,"usuarios",user.user.uid),{
+  nome:nome.value,
   email:email.value,
   tipo:tipoConta.value,
   nivel:nivel.value,
@@ -102,7 +103,7 @@ window.cadastrar = async()=>{
 
 window.login = async()=>{
  await signInWithEmailAndPassword(auth,email.value,senha.value);
- window.location.href="dashboard.html";
+ location.href="dashboard.html";
 }
 </script>
 
