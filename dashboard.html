@@ -5,7 +5,6 @@
 <title>FluxoZap</title>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
 <style>
 body{
@@ -22,41 +21,6 @@ body{
  justify-content:space-between;
  align-items:center;
 }
-
-.user{
- display:flex;
- flex-direction:column;
- align-items:center;
- gap:5px;
-}
-
-.foto-box{
- position:relative;
- width:60px;
- height:60px;
-}
-
-.foto-box img{
- width:60px;
- height:60px;
- border-radius:50%;
-}
-
-.foto-box label{
- position:absolute;
- bottom:0;
- right:0;
- background:#00c853;
- width:20px;
- height:20px;
- border-radius:50%;
- display:flex;
- justify-content:center;
- align-items:center;
- cursor:pointer;
-}
-
-.foto-box input{display:none;}
 
 .container{
  padding:15px;
@@ -91,11 +55,8 @@ button{
 
 .green{background:#00c853;}
 .red{background:#ff1744;}
-.gray{background:#333;}
 
-canvas{height:120px !important;}
-
-.item{border-bottom:1px solid #333;padding:5px 0;}
+.item{border-bottom:1px solid #333;padding:5px;}
 </style>
 </head>
 
@@ -103,19 +64,9 @@ canvas{height:120px !important;}
 
 <div class="topo">
  <div>
-  <div>R$ <span id="saldoTotal">0</span></div>
-  <div>Hoje: R$ <span id="saldoDia">0</span></div>
-  <div>Mês: R$ <span id="saldoMes">0</span></div>
+  <div>Saldo: R$ <span id="saldoTotal">0</span></div>
  </div>
-
- <div class="user">
-  <div class="foto-box">
-    <img id="fotoPerfil">
-    <label for="fotoInput">+</label>
-    <input type="file" id="fotoInput">
-  </div>
-  <div id="nomeUsuario"></div>
- </div>
+ <div id="nomeUsuario"></div>
 </div>
 
 <div class="container">
@@ -133,9 +84,6 @@ canvas{height:120px !important;}
   <option>Aluguel</option>
   <option>Funcionários</option>
   <option>Internet</option>
-  <option>Telefone</option>
-  <option>Cartão</option>
-  <option>Impostos</option>
   <option>Outros</option>
  </select>
  <button class="red" onclick="addSaida()">Gastar</button>
@@ -146,14 +94,6 @@ canvas{height:120px !important;}
 </div>
 
 <div class="card">
- <h4>Filtro</h4>
- <input type="date" id="dataInicio">
- <input type="date" id="dataFim">
- <button class="gray" onclick="filtrar()">Filtrar</button>
- <button class="gray" onclick="gerarPDF()">PDF</button>
-</div>
-
-<div class="card">
  <div id="lista"></div>
 </div>
 
@@ -161,7 +101,7 @@ canvas{height:120px !important;}
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getFirestore, collection, addDoc, onSnapshot, query, where, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getFirestore, collection, addDoc, onSnapshot, query, where, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
 const app = initializeApp({
@@ -173,93 +113,68 @@ const app = initializeApp({
 const db=getFirestore(app);
 const auth=getAuth(app);
 
-let empresaId="";
-let dados=[];
+let empresaId="",userId="",nivel="";
 let chart;
 
 onAuthStateChanged(auth,async user=>{
  if(!user) return location.href="index.html";
 
+ userId=user.uid;
+
  let docUser=await getDoc(doc(db,"usuarios",user.uid));
- let data=docUser.data()||{};
+ let data=docUser.data();
 
- empresaId=data.empresaId||user.uid;
-
- if(!data.nome){
-  let nome=prompt("Digite seu nome:");
-  await setDoc(doc(db,"usuarios",user.uid),{nome},{merge:true});
-  data.nome=nome;
- }
+ empresaId=data.empresaId;
+ nivel=data.nivel;
 
  nomeUsuario.innerText=data.nome;
-
- if(data.foto) fotoPerfil.src=data.foto;
 
  carregar();
 });
 
 function carregar(){
- const q=query(collection(db,"movimentos"),where("empresaId","==",empresaId));
+ let q;
+
+ if(nivel==="admin"){
+  q=query(collection(db,"movimentos"),where("empresaId","==",empresaId));
+ }else{
+  q=query(collection(db,"movimentos"),where("userId","==",userId));
+ }
 
  onSnapshot(q,(snap)=>{
-  let saldo=0,entrada=0,saida=0;
-  let saldoDia=0,saldoMes=0;
-
-  let categorias={};
+  let saldo=0;
+  let entrada=0;
+  let saida=0;
 
   lista.innerHTML="";
-  dados=[];
-
-  let hoje=new Date().toDateString();
-  let mes=new Date().getMonth();
 
   snap.forEach(doc=>{
    let d=doc.data();
    let v=Number(d.valor)||0;
-   let tipo=(d.tipo||"").toLowerCase();
-   let data=new Date(d.data);
 
-   dados.push(d);
-
-   if(tipo==="entrada"){saldo+=v;entrada+=v;}
-   else{
-    saldo-=v;saida+=v;
-
-    let cat=d.categoria||"Outros";
-    categorias[cat]=(categorias[cat]||0)+v;
+   if(d.tipo==="entrada"){
+    saldo+=v; entrada+=v;
+   }else{
+    saldo-=v; saida+=v;
    }
 
-   if(data.toDateString()===hoje){
-    saldoDia+=tipo==="entrada"?v:-v;
-   }
-
-   if(data.getMonth()===mes){
-    saldoMes+=tipo==="entrada"?v:-v;
-   }
-
-   lista.innerHTML+=`<div class="item">${tipo} - R$ ${v} (${d.categoria||""})</div>`;
+   lista.innerHTML+=`<div class="item">${d.tipo} - R$ ${v}</div>`;
   });
 
   saldoTotal.innerText=saldo.toFixed(2);
-  saldoDia.innerText=saldoDia.toFixed(2);
-  saldoMes.innerText=saldoMes.toFixed(2);
 
-  atualizarGrafico(categorias);
- });
-}
+  if(chart) chart.destroy();
 
-function atualizarGrafico(categorias){
- if(chart) chart.destroy();
-
- chart=new Chart(grafico,{
-  type:"doughnut",
-  data:{
-   labels:Object.keys(categorias),
-   datasets:[{
-    data:Object.values(categorias),
-    backgroundColor:["red","orange","yellow","green","blue","purple"]
-   }]
-  }
+  chart=new Chart(grafico,{
+   type:"doughnut",
+   data:{
+    labels:["Entrada","Saída"],
+    datasets:[{
+     data:[entrada,saida],
+     backgroundColor:["green","red"]
+    }]
+   }
+  });
  });
 }
 
@@ -267,8 +182,9 @@ window.addEntrada=async()=>{
  await addDoc(collection(db,"movimentos"),{
   tipo:"entrada",
   valor:Number(entradaValor.value),
-  data:new Date().toISOString(),
-  empresaId
+  empresaId,
+  userId,
+  data:new Date().toISOString()
  });
 }
 
@@ -277,52 +193,10 @@ window.addSaida=async()=>{
   tipo:"saida",
   valor:Number(saidaValor.value),
   categoria:categoria.value,
-  data:new Date().toISOString(),
-  empresaId
+  empresaId,
+  userId,
+  data:new Date().toISOString()
  });
-}
-
-window.filtrar=()=>{
- lista.innerHTML="";
- let i=new Date(dataInicio.value);
- let f=new Date(dataFim.value);
-
- dados.forEach(d=>{
-  let dt=new Date(d.data);
-  if(dt>=i && dt<=f){
-   lista.innerHTML+=`<div>${d.tipo} - R$ ${d.valor}</div>`;
-  }
- });
-}
-
-window.gerarPDF=()=>{
- const { jsPDF } = window.jspdf;
- let doc=new jsPDF();
- let y=10;
-
- dados.forEach(d=>{
-  doc.text(`${d.tipo} - R$ ${d.valor}`,10,y);
-  y+=10;
- });
-
- doc.save("extrato.pdf");
-}
-
-fotoInput.onchange=async()=>{
- let file=fotoInput.files[0];
- const reader=new FileReader();
-
- reader.onload=async e=>{
-  let base64=e.target.result;
-
-  await setDoc(doc(db,"usuarios",auth.currentUser.uid),{
-   foto:base64
-  },{merge:true});
-
-  fotoPerfil.src=base64;
- }
-
- reader.readAsDataURL(file);
 }
 </script>
 
