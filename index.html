@@ -1,95 +1,92 @@
 <!DOCTYPE html>
-<html>
+<html lang="pt-BR">
 <head>
-  <title>FluxoZap 💸</title>
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+<meta charset="UTF-8">
+<title>FluxoZap</title>
 
-  <style>
-    body {
-      margin: 0;
-      font-family: 'Poppins', sans-serif;
-      background: #0f0f0f;
-      color: white;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-    }
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet">
 
-    .box {
-      width: 300px;
-    }
+<style>
+body{
+  margin:0;
+  font-family:Inter;
+  background:#0b0c10;
+  color:white;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  height:100vh;
+}
 
-    h1 {
-      margin-bottom: 25px;
-    }
+.box{
+  background:#15171c;
+  padding:40px;
+  border-radius:20px;
+  width:300px;
+}
 
-    input {
-      width: 100%;
-      padding: 14px;
-      margin-bottom: 10px;
-      border-radius: 12px;
-      border: none;
-      background: #1c1c1c;
-      color: white;
-    }
+input{
+  width:100%;
+  padding:12px;
+  margin-top:10px;
+  border:none;
+  border-radius:10px;
+  background:#222;
+  color:white;
+}
 
-    button {
-      width: 100%;
-      padding: 14px;
-      border-radius: 12px;
-      border: none;
-      margin-top: 10px;
-      font-weight: bold;
-      cursor: pointer;
-    }
+button{
+  width:100%;
+  padding:12px;
+  margin-top:15px;
+  border:none;
+  border-radius:10px;
+  background:#00c853;
+  font-weight:bold;
+}
 
-    .login { background: #00c853; }
-    .criar { background: #2962ff; }
-  </style>
+h1{
+  text-align:center;
+}
+</style>
 </head>
 
 <body>
 
 <div class="box">
-  <h1>FluxoZap 💸</h1>
+<h1>FluxoZap 💳</h1>
 
-  <input id="email" placeholder="Email">
-  <input id="senha" type="password" placeholder="Senha">
+<input id="email" placeholder="Email">
+<input id="senha" type="password" placeholder="Senha">
 
-  <button class="login" onclick="login()">Entrar</button>
-  <button class="criar" onclick="irCadastro()">Criar conta</button>
+<button onclick="login()">Entrar</button>
+<button onclick="cadastrar()">Criar conta</button>
+
 </div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getAuth, signInWithEmailAndPassword } 
-from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
-const firebaseConfig = {
-  apiKey: "AIzaSyAh0Qi4lm-ZXQLe4YAca8wYbp5kcU6lY3I",
-  authDomain: "fluxozap-10ead.firebaseapp.com",
-  projectId: "fluxozap-10ead",
-  storageBucket: "fluxozap-10ead.firebasestorage.app",
-  messagingSenderId: "743375450552",
-  appId: "1:743375450552:web:48b85313fbc7fc30b29f4d"
+const firebaseConfig={
+  apiKey:"AIzaSyAh0Qi4lm-ZXQLe4YAca8wYbp5kcU6lY3I",
+  authDomain:"fluxozap-10ead.firebaseapp.com",
+  projectId:"fluxozap-10ead"
 };
 
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
+const app=initializeApp(firebaseConfig);
+const auth=getAuth(app);
 
-window.login = function() {
-  signInWithEmailAndPassword(auth, email.value, senha.value)
-    .then((userCredential) => {
-      window.location.href = "dashboard.html";
-    })
-    .catch((error) => {
-      alert("Erro: " + error.message);
-    });
+window.login=()=>{
+  signInWithEmailAndPassword(auth,email.value,senha.value)
+  .then(()=>window.location.href="dashboard.html")
+  .catch(()=>alert("Erro ao entrar"));
 }
 
-window.irCadastro = function() {
-  window.location.href = "cadastro.html";
+window.cadastrar=()=>{
+  createUserWithEmailAndPassword(auth,email.value,senha.value)
+  .then(()=>alert("Conta criada!"))
+  .catch(()=>alert("Erro ao cadastrar"));
 }
 </script>
 
