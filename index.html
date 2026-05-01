@@ -4,28 +4,75 @@
 <meta charset="UTF-8">
 <title>FluxoZap</title>
 
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
 <style>
 body{
+ margin:0;
+ font-family:Arial;
  background:#0f0f14;
  color:white;
- font-family:Arial;
+}
+
+.topo{
+ background:linear-gradient(135deg,#6a00ff,#8e2de2);
+ padding:20px;
+ display:flex;
+ justify-content:space-between;
+ align-items:center;
+}
+
+.user{
+ display:flex;
+ flex-direction:column;
+ align-items:center;
+}
+
+.foto-box{
+ position:relative;
+ width:60px;
+ height:60px;
+}
+
+.foto-box img{
+ width:60px;
+ height:60px;
+ border-radius:50%;
+ object-fit:cover;
+}
+
+.foto-box label{
+ position:absolute;
+ bottom:0;
+ right:0;
+ background:#00c853;
+ width:20px;
+ height:20px;
+ border-radius:50%;
  display:flex;
  justify-content:center;
  align-items:center;
- height:100vh;
+ cursor:pointer;
 }
 
-.box{
+.foto-box input{display:none;}
+
+.container{
+ padding:15px;
+ display:grid;
+ gap:15px;
+}
+
+.card{
  background:#1c1c25;
- padding:30px;
+ padding:15px;
  border-radius:15px;
- width:320px;
 }
 
 input,select{
  width:100%;
  padding:10px;
- margin-top:10px;
+ margin-top:5px;
  background:#2a2a35;
  border:none;
  border-radius:8px;
@@ -35,42 +82,80 @@ input,select{
 button{
  width:100%;
  padding:10px;
- margin-top:10px;
+ margin-top:5px;
  border:none;
  border-radius:8px;
- background:#6a00ff;
- color:white;
+ font-weight:bold;
 }
+
+.green{background:#00c853;}
+.red{background:#ff1744;}
+
+.item{border-bottom:1px solid #333;padding:5px;}
+
+canvas{height:120px !important;}
 </style>
 </head>
 
 <body>
 
-<div class="box">
-<h2>FluxoZap 💳</h2>
+<div class="topo">
+ <div>
+  <div>Saldo: R$ <span id="saldoTotal">0</span></div>
+  <div>Hoje: R$ <span id="saldoDia">0</span></div>
+  <div>Mês: R$ <span id="saldoMes">0</span></div>
+ </div>
 
-<input id="nome" placeholder="Nome">
-<input id="email" placeholder="Email">
-<input id="senha" type="password" placeholder="Senha">
+ <div class="user">
+  <div class="foto-box">
+    <img id="fotoPerfil">
+    <label for="fotoInput">+</label>
+    <input type="file" id="fotoInput">
+  </div>
+  <div id="nomeUsuario"></div>
+ </div>
+</div>
 
-<select id="tipo">
-<option value="pessoal">Conta pessoal</option>
-<option value="profissional">Conta profissional</option>
-</select>
+<div class="container">
 
-<select id="nivel">
-<option value="admin">Patrão</option>
-<option value="funcionario">Funcionário</option>
-</select>
+<div class="card">
+ <h3>Receber</h3>
+ <input id="entradaValor">
+ <button class="green" onclick="addEntrada()">Adicionar</button>
 
-<button onclick="cadastrar()">Criar conta</button>
-<button onclick="login()">Entrar</button>
+ <h3>Gastar</h3>
+ <input id="saidaValor">
+ <select id="categoria">
+  <option>Alimentação</option>
+  <option>Gasolina</option>
+  <option>Energia</option>
+  <option>Água</option>
+  <option>Aluguel</option>
+  <option>Funcionários</option>
+  <option>Internet</option>
+  <option>Telefone</option>
+  <option>Cartão</option>
+  <option>Impostos</option>
+  <option>Outros</option>
+ </select>
+ <button class="red" onclick="addSaida()">Adicionar</button>
+</div>
+
+<div class="card">
+ <canvas id="grafico"></canvas>
+</div>
+
+<div class="card">
+ <h3>Extrato</h3>
+ <div id="lista"></div>
+</div>
+
 </div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getFirestore, collection, addDoc, onSnapshot, query, where, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
 const app = initializeApp({
  apiKey:"AIzaSyAh0Qi4lm-ZXQLe4YAca8wYbp5kcU6lY3I",
@@ -78,37 +163,138 @@ const app = initializeApp({
  projectId:"fluxozap-10ead"
 });
 
-const auth=getAuth(app);
 const db=getFirestore(app);
+const auth=getAuth(app);
 
-window.cadastrar = async()=>{
- let user = await createUserWithEmailAndPassword(auth,email.value,senha.value);
+let empresaId="",userId="",nivel="";
+let chart;
 
- let empresaId;
+onAuthStateChanged(auth,async user=>{
+ if(!user) return location.href="index.html";
 
- if(tipo.value==="profissional"){
-  if(nivel.value==="admin"){
-    empresaId = user.user.uid;
-  }else{
-    empresaId = prompt("Digite o ID da empresa (do patrão)");
-  }
- }else{
-  empresaId = user.user.uid;
+ userId=user.uid;
+
+ let docUser=await getDoc(doc(db,"usuarios",user.uid));
+ let data=docUser.data()||{};
+
+ empresaId=data.empresaId||user.uid;
+ nivel=data.nivel||"admin";
+
+ if(!data.nome){
+  let nome=prompt("Digite seu nome:");
+  await setDoc(doc(db,"usuarios",user.uid),{nome},{merge:true});
+  data.nome=nome;
  }
 
- await setDoc(doc(db,"usuarios",user.user.uid),{
-  nome:nome.value,
-  tipo:tipo.value,
-  nivel:nivel.value,
-  empresaId
- });
+ nomeUsuario.innerText=data.nome;
 
- alert("Conta criada!");
+ if(data.foto) fotoPerfil.src=data.foto;
+
+ carregar();
+});
+
+function carregar(){
+ let q;
+
+ if(nivel==="admin"){
+  q=query(collection(db,"movimentos"),where("empresaId","==",empresaId));
+ }else{
+  q=query(collection(db,"movimentos"),where("userId","==",userId));
+ }
+
+ onSnapshot(q,(snap)=>{
+  let saldo=0,entrada=0,saida=0;
+  let saldoDia=0,saldoMes=0;
+
+  lista.innerHTML="";
+
+  let hoje=new Date().toDateString();
+  let mes=new Date().getMonth();
+
+  snap.forEach(doc=>{
+   let d=doc.data();
+   let v=Number(d.valor)||0;
+   let data=new Date(d.data);
+
+   if(d.tipo==="entrada"){
+    saldo+=v; entrada+=v;
+   }else{
+    saldo-=v; saida+=v;
+   }
+
+   if(data.toDateString()===hoje){
+    saldoDia += d.tipo==="entrada"?v:-v;
+   }
+
+   if(data.getMonth()===mes){
+    saldoMes += d.tipo==="entrada"?v:-v;
+   }
+
+   lista.innerHTML+=`<div class="item">${d.tipo} - R$ ${v} (${d.categoria||""})</div>`;
+  });
+
+  saldoTotal.innerText=saldo.toFixed(2);
+  saldoDia.innerText=saldoDia.toFixed(2);
+  saldoMes.innerText=saldoMes.toFixed(2);
+
+  if(chart) chart.destroy();
+
+  chart=new Chart(grafico,{
+   type:"doughnut",
+   data:{
+    labels:["Entrada","Saída"],
+    datasets:[{
+     data:[entrada,saida],
+     backgroundColor:["#00c853","#ff1744"]
+    }]
+   }
+  });
+ });
 }
 
-window.login=async()=>{
- await signInWithEmailAndPassword(auth,email.value,senha.value);
- location.href="dashboard.html";
+window.addEntrada=async()=>{
+ let v=Number(entradaValor.value);
+ if(!v) return alert("Digite valor");
+
+ await addDoc(collection(db,"movimentos"),{
+  tipo:"entrada",
+  valor:v,
+  empresaId,
+  userId,
+  data:new Date().toISOString()
+ });
+}
+
+window.addSaida=async()=>{
+ let v=Number(saidaValor.value);
+ if(!v) return alert("Digite valor");
+
+ await addDoc(collection(db,"movimentos"),{
+  tipo:"saida",
+  valor:v,
+  categoria:categoria.value,
+  empresaId,
+  userId,
+  data:new Date().toISOString()
+ });
+}
+
+// FOTO SEM STORAGE
+fotoInput.onchange=async()=>{
+ let file=fotoInput.files[0];
+ const reader=new FileReader();
+
+ reader.onload=async e=>{
+  let base64=e.target.result;
+
+  await setDoc(doc(db,"usuarios",auth.currentUser.uid),{
+   foto:base64
+  },{merge:true});
+
+  fotoPerfil.src=base64;
+ }
+
+ reader.readAsDataURL(file);
 }
 </script>
 
