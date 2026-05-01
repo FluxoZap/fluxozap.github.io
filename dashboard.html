@@ -133,9 +133,6 @@ canvas{height:120px !important;}
   <option>Aluguel</option>
   <option>Funcionários</option>
   <option>Internet</option>
-  <option>Telefone</option>
-  <option>Cartão</option>
-  <option>Impostos</option>
   <option>Outros</option>
  </select>
  <button class="red" onclick="addSaida()">Adicionar</button>
@@ -143,6 +140,18 @@ canvas{height:120px !important;}
 
 <div class="card">
  <canvas id="grafico"></canvas>
+</div>
+
+<div class="card">
+ <h3>Meta mensal</h3>
+ <input id="metaValor">
+ <button onclick="salvarMeta()">Salvar meta</button>
+ <div id="metaStatus"></div>
+</div>
+
+<div class="card" id="painelAdmin" style="display:none">
+ <h3>Funcionários</h3>
+ <div id="listaFuncionarios"></div>
 </div>
 
 <div class="card">
@@ -168,6 +177,8 @@ const auth=getAuth(app);
 
 let empresaId="",userId="",nivel="";
 let chart;
+let dados=[];
+let meta=0;
 
 onAuthStateChanged(auth,async user=>{
  if(!user) return location.href="index.html";
@@ -179,12 +190,6 @@ onAuthStateChanged(auth,async user=>{
 
  empresaId=data.empresaId||user.uid;
  nivel=data.nivel||"admin";
-
- if(!data.nome){
-  let nome=prompt("Digite seu nome:");
-  await setDoc(doc(db,"usuarios",user.uid),{nome},{merge:true});
-  data.nome=nome;
- }
 
  nomeUsuario.innerText=data.nome;
 
@@ -206,6 +211,7 @@ function carregar(){
   let saldo=0,entrada=0,saida=0;
   let saldoDia=0,saldoMes=0;
 
+  dados=[];
   lista.innerHTML="";
 
   let hoje=new Date().toDateString();
@@ -215,6 +221,8 @@ function carregar(){
    let d=doc.data();
    let v=Number(d.valor)||0;
    let data=new Date(d.data);
+
+   dados.push(d);
 
    if(d.tipo==="entrada"){
     saldo+=v; entrada+=v;
@@ -237,6 +245,27 @@ function carregar(){
   saldoDia.innerText=saldoDia.toFixed(2);
   saldoMes.innerText=saldoMes.toFixed(2);
 
+  if(meta){
+   let p=(saldoMes/meta)*100;
+   metaStatus.innerText="Meta: "+p.toFixed(1)+"%";
+  }
+
+  if(nivel==="admin"){
+   painelAdmin.style.display="block";
+
+   let resumo={};
+
+   dados.forEach(d=>{
+    if(!resumo[d.userId]) resumo[d.userId]=0;
+    resumo[d.userId]+=d.tipo==="entrada"?d.valor:-d.valor;
+   });
+
+   listaFuncionarios.innerHTML="";
+   Object.keys(resumo).forEach(id=>{
+    listaFuncionarios.innerHTML+=`<div class="item">${id} → R$ ${resumo[id].toFixed(2)}</div>`;
+   });
+  }
+
   if(chart) chart.destroy();
 
   chart=new Chart(grafico,{
@@ -252,13 +281,12 @@ function carregar(){
  });
 }
 
-window.addEntrada=async()=>{
- let v=Number(entradaValor.value);
- if(!v) return alert("Digite valor");
+window.salvarMeta=()=> meta=Number(metaValor.value);
 
+window.addEntrada=async()=>{
  await addDoc(collection(db,"movimentos"),{
   tipo:"entrada",
-  valor:v,
+  valor:Number(entradaValor.value),
   empresaId,
   userId,
   data:new Date().toISOString()
@@ -266,12 +294,9 @@ window.addEntrada=async()=>{
 }
 
 window.addSaida=async()=>{
- let v=Number(saidaValor.value);
- if(!v) return alert("Digite valor");
-
  await addDoc(collection(db,"movimentos"),{
   tipo:"saida",
-  valor:v,
+  valor:Number(saidaValor.value),
   categoria:categoria.value,
   empresaId,
   userId,
@@ -279,7 +304,6 @@ window.addSaida=async()=>{
  });
 }
 
-// FOTO SEM STORAGE
 fotoInput.onchange=async()=>{
  let file=fotoInput.files[0];
  const reader=new FileReader();
