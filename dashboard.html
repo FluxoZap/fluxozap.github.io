@@ -113,6 +113,7 @@ text-align:center;
 <option>Outros</option>
 </select>
 <button class="btn-red" onclick="addSaida()">Adicionar</button>
+
 </div>
 
 <div class="card">
@@ -140,7 +141,7 @@ text-align:center;
 
 </div>
 
-<!-- MODAL PAGAMENTO -->
+<!-- MODAL PIX -->
 <div class="modal" id="modalPix">
 <div class="modal-content">
 
@@ -158,9 +159,7 @@ text-align:center;
 <h3>Pagamento via Pix</h3>
 
 <img id="qr" width="200">
-<p id="valorPix"></p>
-
-<p>Aguardando pagamento...</p>
+<p id="statusPix">Aguardando pagamento...</p>
 </div>
 
 <br>
@@ -272,7 +271,6 @@ document.getElementById("lista").innerHTML = html;
 }
 
 function pdf(){
-
 if(plano === "gratis"){
 alert("PDF apenas no plano PRO.");
 return;
@@ -290,7 +288,6 @@ y+=10;
 doc.save("extrato.pdf");
 }
 
-/* FOTO */
 function trocarFoto(e){
 let file = e.target.files[0];
 let reader = new FileReader();
@@ -302,7 +299,6 @@ document.getElementById("foto").src = reader.result;
 reader.readAsDataURL(file);
 }
 
-/* PLANOS */
 function abrirPlanos(){
 document.getElementById("modalPix").style.display="flex";
 }
@@ -325,19 +321,36 @@ body:JSON.stringify({plano:planoEscolhido})
 let data = await res.json();
 
 document.getElementById("qr").src = data.qrCode;
-document.getElementById("valorPix").innerText = "Valor: R$ " + data.valor;
 
-/* SIMULA CONFIRMAÇÃO AUTOMÁTICA */
+// 🔥 VERIFICAÇÃO AUTOMÁTICA
+verificarPagamento(data.txid, planoEscolhido);
+}
+
+async function verificarPagamento(txid, planoEscolhido){
+
+let interval = setInterval(async ()=>{
+
+let res = await fetch("http://localhost:3000/status/" + txid);
+let data = await res.json();
+
+if(data.status === "CONCLUIDA"){
+
+clearInterval(interval);
+
+document.getElementById("statusPix").innerText = "Pagamento confirmado!";
+
+localStorage.setItem("plano", planoEscolhido);
+
 setTimeout(()=>{
-alert("Pagamento confirmado!");
-plano = planoEscolhido;
-localStorage.setItem("plano", plano);
 fechar();
-}, 5000);
+},2000);
 
 }
 
-/* INICIO */
+},3000);
+
+}
+
 function carregar(){
 document.getElementById("nome").innerText = localStorage.getItem("nome") || "Usuário";
 document.getElementById("foto").src = localStorage.getItem("foto") || "";
