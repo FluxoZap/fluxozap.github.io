@@ -6,9 +6,10 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// 🔐 SUAS CREDENCIAIS EFÍ
+// 🔐 CREDENCIAIS EFÍ
 const client_id = "SEU_CLIENT_ID";
 const client_secret = "SEU_CLIENT_SECRET";
+const chave_pix = "silvaereisrepresentacao@gmail.com";
 
 // 🔑 GERAR TOKEN
 async function gerarToken() {
@@ -39,7 +40,7 @@ app.post("/criar-pix", async (req, res) => {
       {
         calendario: { expiracao: 3600 },
         valor: { original: valor.toFixed(2) },
-        chave: "SEU_PIX_AQUI",
+        chave: chave_pix,
         solicitacaoPagador: "FluxoZap - Assinatura"
       },
       {
@@ -50,6 +51,7 @@ app.post("/criar-pix", async (req, res) => {
     );
 
     const loc = response.data.loc.id;
+    const txid = response.data.txid;
 
     const qr = await axios.get(
       `https://pix.api.efipay.com.br/v2/loc/${loc}/qrcode`,
@@ -62,24 +64,52 @@ app.post("/criar-pix", async (req, res) => {
 
     res.json({
       qrCode: qr.data.imagemQrcode,
-      txid: response.data.txid
+      txid: txid
     });
 
   } catch (err) {
     console.log(err.response?.data || err);
-    res.status(500).send("Erro Pix");
+    res.status(500).send("Erro ao gerar Pix");
   }
 });
 
-// 🔔 WEBHOOK (CONFIRMAÇÃO)
-app.post("/webhook", (req, res) => {
-  console.log("Pagamento recebido:", req.body);
+// 🔎 CONSULTAR STATUS REAL DO PIX
+app.get("/status/:txid", async (req, res) => {
 
-  // 👉 aqui você libera o plano no banco
+  try{
+
+    const txid = req.params.txid;
+
+    const token = await gerarToken();
+
+    const response = await axios.get(
+      `https://pix.api.efipay.com.br/v2/cob/${txid}`,
+      {
+        headers:{
+          Authorization: `Bearer ${token}`
+        }
+      }
+    );
+
+    res.json({
+      status: response.data.status
+    });
+
+  }catch(err){
+    console.log(err.response?.data || err);
+    res.status(500).send("Erro ao consultar status");
+  }
+
+});
+
+// 🔔 WEBHOOK (OPCIONAL MAS IDEAL)
+app.post("/webhook", (req, res) => {
+
+  console.log("Pagamento confirmado webhook:", req.body);
 
   res.sendStatus(200);
 });
 
 app.listen(3000, () => {
-  console.log("🔥 Backend rodando na porta 3000");
+  console.log("🔥 Backend Pix rodando na porta 3000");
 });
