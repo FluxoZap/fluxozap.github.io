@@ -4,109 +4,147 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>FluxoZap - Dashboard</title>
+<title>FluxoZap - Empresa</title>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
 <style>
-body {
-  margin:0;
-  font-family:Arial;
-  background:#0b0b0b;
-  color:#fff;
+body{
+margin:0;
+font-family:Arial;
+background:#0b0b0b;
+color:white;
+display:flex;
 }
 
-.top {
-  display:flex;
-  justify-content:space-between;
-  padding:20px;
+/* MENU */
+.menu{
+width:230px;
+background:#0f0f0f;
+padding:20px;
+height:100vh;
 }
 
-.card {
-  background:#111;
-  padding:20px;
-  border-radius:15px;
-  margin:10px;
-  flex:1;
+.menu h2{
+color:#7c4dff;
 }
 
-.grid {
-  display:grid;
-  grid-template-columns:1fr 1fr;
+.menu a{
+display:block;
+color:#aaa;
+margin:15px 0;
+text-decoration:none;
 }
 
-input, select, button {
-  width:100%;
-  padding:10px;
-  margin-top:10px;
-  border-radius:10px;
-  border:none;
+/* CONTEUDO */
+.main{
+flex:1;
+padding:20px;
 }
 
-button {
-  cursor:pointer;
+.top{
+display:flex;
+justify-content:space-between;
+align-items:center;
 }
 
-.btn-green { background:#00c853; color:white; }
-.btn-red { background:#ff1744; color:white; }
-
-.profile {
-  text-align:center;
+.profile{
+display:flex;
+align-items:center;
+gap:10px;
 }
 
-.profile img {
-  width:80px;
-  height:80px;
-  border-radius:50%;
-  object-fit:cover;
+.profile img{
+width:50px;
+height:50px;
+border-radius:50%;
 }
 
-canvas {
-  max-height:200px;
+/* CARDS */
+.cards{
+display:grid;
+grid-template-columns:repeat(4,1fr);
+gap:15px;
+margin-top:20px;
+}
+
+.card{
+background:#111;
+padding:20px;
+border-radius:15px;
+}
+
+/* GRID */
+.grid{
+display:grid;
+grid-template-columns:2fr 1fr;
+gap:15px;
+margin-top:20px;
+}
+
+input,select,button{
+width:100%;
+padding:10px;
+margin-top:10px;
+border-radius:10px;
+border:none;
+}
+
+.btn-green{background:#00c853;color:white;}
+.btn-red{background:#ff1744;color:white;}
+
+.extrato p{
+border-bottom:1px solid #222;
+padding:5px 0;
 }
 </style>
 </head>
 
 <body>
 
-<div class="top">
-  <div>
-    <h2>FluxoZap</h2>
-    <p id="nome">Usuário</p>
-  </div>
-
-  <div class="profile">
-    <img id="foto" src="" />
-    <input type="file" onchange="trocarFoto(event)">
-  </div>
+<div class="menu">
+<h2>FluxoZap</h2>
+<a>Dashboard</a>
+<a>Movimentações</a>
+<a>Relatórios</a>
+<a>Funcionários</a>
+<a>Configurações</a>
 </div>
 
+<div class="main">
+
+<div class="top">
+<div>
+<h2>Dashboard</h2>
+<p id="nome"></p>
+</div>
+
+<div class="profile">
+<img id="foto">
+<input type="file" onchange="foto(event)">
+</div>
+</div>
+
+<!-- CARDS -->
+<div class="cards">
+<div class="card">Saldo Total<br><b id="total">0</b></div>
+<div class="card">Entradas Mês<br><b id="entradaMes">0</b></div>
+<div class="card">Saídas Mês<br><b id="saidaMes">0</b></div>
+<div class="card">Saldo Hoje<br><b id="dia">0</b></div>
+</div>
+
+<!-- GRID -->
 <div class="grid">
 
 <div class="card">
-<h3>Saldo</h3>
-<p>Total: R$ <span id="saldoTotal">0</span></p>
-<p>Mês: R$ <span id="saldoMes">0</span></p>
-<p>Hoje: R$ <span id="saldoDia">0</span></p>
-</div>
+<h3>Movimentar</h3>
 
-<div class="card">
-<h3>Filtro</h3>
-<input type="date" id="inicio">
-<input type="date" id="fim">
-<button onclick="filtrar()">Filtrar</button>
-<button onclick="pdf()">Exportar PDF</button>
-</div>
-
-<div class="card">
-<h3>Receber</h3>
-<input type="number" id="entrada">
+<input id="entrada" placeholder="Entrada">
 <button class="btn-green" onclick="addEntrada()">Adicionar</button>
 
-<h3>Gastar</h3>
-<input type="number" id="saida">
-<select id="categoria">
+<input id="saida" placeholder="Saída">
+<select id="cat">
 <option>Alimentação</option>
 <option>Gasolina</option>
 <option>Energia</option>
@@ -117,129 +155,130 @@ canvas {
 <option>Outros</option>
 </select>
 <button class="btn-red" onclick="addSaida()">Adicionar</button>
+
 </div>
 
 <div class="card">
-<h3>Gráfico</h3>
+<h3>Filtro</h3>
+<input type="date" id="i">
+<input type="date" id="f">
+<button onclick="filtrar()">Filtrar</button>
+<button onclick="pdf()">PDF</button>
+</div>
+
+</div>
+
+<div class="grid">
+
+<div class="card">
 <canvas id="grafico"></canvas>
 </div>
 
-<div class="card">
+<div class="card extrato">
 <h3>Extrato</h3>
-<div id="extrato"></div>
+<div id="lista"></div>
+</div>
+
 </div>
 
 </div>
 
 <script>
 
-let dados = JSON.parse(localStorage.getItem("dados")) || [];
+let dados = JSON.parse(localStorage.getItem("dados"))||[];
 
-function salvar(){
-  localStorage.setItem("dados", JSON.stringify(dados));
-}
+function salvar(){localStorage.setItem("dados",JSON.stringify(dados));}
 
 function atualizar(){
 
-let total=0, mes=0, dia=0;
-let hoje = new Date().toISOString().slice(0,10);
-let mesAtual = hoje.slice(0,7);
+let total=0, entradaMes=0, saidaMes=0, dia=0;
+let hoje=new Date().toISOString().slice(0,10);
+let mes=hoje.slice(0,7);
 
 dados.forEach(d=>{
-  if(d.tipo=="entrada"){
-    total += d.valor;
-    if(d.data.startsWith(mesAtual)) mes += d.valor;
-    if(d.data==hoje) dia += d.valor;
-  } else {
-    total -= d.valor;
-    if(d.data.startsWith(mesAtual)) mes -= d.valor;
-    if(d.data==hoje) dia -= d.valor;
-  }
+if(d.tipo=="entrada"){
+total+=d.valor;
+if(d.data.startsWith(mes)) entradaMes+=d.valor;
+if(d.data==hoje) dia+=d.valor;
+}else{
+total-=d.valor;
+if(d.data.startsWith(mes)) saidaMes+=d.valor;
+if(d.data==hoje) dia-=d.valor;
+}
 });
 
-document.getElementById("saldoTotal").innerText = total;
-document.getElementById("saldoMes").innerText = mes;
-document.getElementById("saldoDia").innerText = dia;
+document.getElementById("total").innerText=total;
+document.getElementById("entradaMes").innerText=entradaMes;
+document.getElementById("saidaMes").innerText=saidaMes;
+document.getElementById("dia").innerText=dia;
 
-let extratoHTML="";
+let html="";
 dados.slice().reverse().forEach(d=>{
-  extratoHTML += `<p>${d.tipo} R$${d.valor} - ${d.data}</p>`;
+html+=`<p>${d.tipo} R$${d.valor} - ${d.data}</p>`;
 });
-document.getElementById("extrato").innerHTML = extratoHTML;
+document.getElementById("lista").innerHTML=html;
 
-grafico(total, mes);
+grafico(entradaMes,saidaMes);
 }
 
 function addEntrada(){
-let v = Number(document.getElementById("entrada").value);
-dados.push({tipo:"entrada", valor:v, data:new Date().toISOString().slice(0,10)});
-salvar();
-atualizar();
+let v=Number(document.getElementById("entrada").value);
+dados.push({tipo:"entrada",valor:v,data:new Date().toISOString().slice(0,10)});
+salvar();atualizar();
 }
 
 function addSaida(){
-let v = Number(document.getElementById("saida").value);
-dados.push({tipo:"saida", valor:v, data:new Date().toISOString().slice(0,10)});
-salvar();
-atualizar();
+let v=Number(document.getElementById("saida").value);
+dados.push({tipo:"saida",valor:v,data:new Date().toISOString().slice(0,10)});
+salvar();atualizar();
 }
 
-function grafico(total, mes){
-new Chart(document.getElementById("grafico"), {
-type:"doughnut",
-data:{
-labels:["Total","Mês"],
-datasets:[{
-data:[total, mes],
-backgroundColor:["#00c853","#ff1744"]
-}]
-}
+function grafico(e,s){
+new Chart(document.getElementById("grafico"),{
+type:"bar",
+data:{labels:["Entradas","Saídas"],datasets:[{data:[e,s]}]}
 });
 }
 
 function filtrar(){
-let i = document.getElementById("inicio").value;
-let f = document.getElementById("fim").value;
+let i=document.getElementById("i").value;
+let f=document.getElementById("f").value;
 
-let filtrado = dados.filter(d=> d.data>=i && d.data<=f);
+let filtrado=dados.filter(d=>d.data>=i && d.data<=f);
 
 let html="";
 filtrado.forEach(d=>{
-html += `<p>${d.tipo} R$${d.valor} - ${d.data}</p>`;
+html+=`<p>${d.tipo} R$${d.valor} - ${d.data}</p>`;
 });
-
-document.getElementById("extrato").innerHTML = html;
+document.getElementById("lista").innerHTML=html;
 }
 
 function pdf(){
 const { jsPDF } = window.jspdf;
-let doc = new jsPDF();
-
+let doc=new jsPDF();
 let y=10;
 
 dados.forEach(d=>{
-doc.text(`${d.tipo} R$${d.valor} - ${d.data}`,10,y);
+doc.text(`${d.tipo} R$${d.valor}`,10,y);
 y+=10;
 });
 
 doc.save("extrato.pdf");
 }
 
-function trocarFoto(e){
-let file = e.target.files[0];
-let reader = new FileReader();
-
-reader.onload = function(){
-localStorage.setItem("foto", reader.result);
-document.getElementById("foto").src = reader.result;
+function foto(e){
+let file=e.target.files[0];
+let r=new FileReader();
+r.onload=()=>{
+localStorage.setItem("foto",r.result);
+document.getElementById("foto").src=r.result;
 }
-
-reader.readAsDataURL(file);
+r.readAsDataURL(file);
 }
 
 function carregar(){
-document.getElementById("nome").innerText = localStorage.getItem("nome") || "Usuário";
-document.getElementById("foto").src = localStorage.getItem("foto") || "";
+document.getElementById("nome").innerText=localStorage.getItem("nome")||"Usuário";
+document.getElementById("foto").src=localStorage.getItem("foto")||"";
 }
 
 carregar();
