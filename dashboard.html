@@ -3,271 +3,248 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>FluxoZap</title>
 
-<link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#6a00ff">
-<link rel="icon" href="https://cdn-icons-png.flaticon.com/512/2331/2331941.png">
+<title>FluxoZap - Dashboard</title>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
 <style>
-body{
- margin:0;
- font-family:Arial;
- background:#0f0f14;
- color:white;
+body {
+  margin:0;
+  font-family:Arial;
+  background:#0b0b0b;
+  color:#fff;
 }
 
-.topo{
- background:linear-gradient(135deg,#6a00ff,#8e2de2);
- padding:20px;
- display:flex;
- justify-content:space-between;
- align-items:center;
+.top {
+  display:flex;
+  justify-content:space-between;
+  padding:20px;
 }
 
-.logo{
- font-size:18px;
- font-weight:bold;
+.card {
+  background:#111;
+  padding:20px;
+  border-radius:15px;
+  margin:10px;
+  flex:1;
 }
 
-.user{
- display:flex;
- flex-direction:column;
- align-items:center;
+.grid {
+  display:grid;
+  grid-template-columns:1fr 1fr;
 }
 
-.foto-box{
- position:relative;
- width:60px;
- height:60px;
+input, select, button {
+  width:100%;
+  padding:10px;
+  margin-top:10px;
+  border-radius:10px;
+  border:none;
 }
 
-.foto-box img{
- width:60px;
- height:60px;
- border-radius:50%;
- object-fit:cover;
+button {
+  cursor:pointer;
 }
 
-.foto-box label{
- position:absolute;
- bottom:0;
- right:0;
- background:#00c853;
- width:20px;
- height:20px;
- border-radius:50%;
- display:flex;
- justify-content:center;
- align-items:center;
- cursor:pointer;
+.btn-green { background:#00c853; color:white; }
+.btn-red { background:#ff1744; color:white; }
+
+.profile {
+  text-align:center;
 }
 
-.foto-box input{display:none;}
-
-.container{
- padding:15px;
- display:grid;
- gap:15px;
+.profile img {
+  width:80px;
+  height:80px;
+  border-radius:50%;
+  object-fit:cover;
 }
 
-.card{
- background:#1c1c25;
- padding:15px;
- border-radius:15px;
+canvas {
+  max-height:200px;
 }
-
-input,select{
- width:100%;
- padding:12px;
- margin-top:8px;
- background:#2a2a35;
- border:none;
- border-radius:10px;
- color:white;
-}
-
-button{
- width:100%;
- padding:12px;
- margin-top:10px;
- border:none;
- border-radius:10px;
- font-weight:bold;
-}
-
-.green{background:#00c853;}
-.red{background:#ff1744;}
-
-canvas{height:140px !important;}
 </style>
 </head>
 
 <body>
 
-<div class="topo">
- <div>
-  <div class="logo">FluxoZap 💳</div>
-  <div>Saldo: R$ <span id="saldoTotal">0</span></div>
-  <div>Hoje: R$ <span id="saldoDia">0</span></div>
-  <div>Mês: R$ <span id="saldoMes">0</span></div>
- </div>
-
- <div class="user">
-  <div class="foto-box">
-    <img id="fotoPerfil">
-    <label for="fotoInput">+</label>
-    <input type="file" id="fotoInput">
+<div class="top">
+  <div>
+    <h2>FluxoZap</h2>
+    <p id="nome">Usuário</p>
   </div>
-  <div id="nomeUsuario"></div>
- </div>
+
+  <div class="profile">
+    <img id="foto" src="" />
+    <input type="file" onchange="trocarFoto(event)">
+  </div>
 </div>
 
-<div class="container">
+<div class="grid">
 
 <div class="card">
- <input id="entradaValor" placeholder="Valor recebido">
- <button class="green" onclick="addEntrada()">Receber</button>
-
- <input id="saidaValor" placeholder="Valor gasto">
- <select id="categoria">
-  <option>Alimentação</option>
-  <option>Gasolina</option>
-  <option>Energia</option>
-  <option>Água</option>
-  <option>Aluguel</option>
-  <option>Funcionários</option>
-  <option>Internet</option>
-  <option>Outros</option>
- </select>
- <button class="red" onclick="addSaida()">Gastar</button>
+<h3>Saldo</h3>
+<p>Total: R$ <span id="saldoTotal">0</span></p>
+<p>Mês: R$ <span id="saldoMes">0</span></p>
+<p>Hoje: R$ <span id="saldoDia">0</span></p>
 </div>
 
 <div class="card">
- <canvas id="grafico"></canvas>
+<h3>Filtro</h3>
+<input type="date" id="inicio">
+<input type="date" id="fim">
+<button onclick="filtrar()">Filtrar</button>
+<button onclick="pdf()">Exportar PDF</button>
 </div>
 
 <div class="card">
- <div id="lista"></div>
+<h3>Receber</h3>
+<input type="number" id="entrada">
+<button class="btn-green" onclick="addEntrada()">Adicionar</button>
+
+<h3>Gastar</h3>
+<input type="number" id="saida">
+<select id="categoria">
+<option>Alimentação</option>
+<option>Gasolina</option>
+<option>Energia</option>
+<option>Água</option>
+<option>Aluguel</option>
+<option>Funcionário</option>
+<option>Internet</option>
+<option>Outros</option>
+</select>
+<button class="btn-red" onclick="addSaida()">Adicionar</button>
+</div>
+
+<div class="card">
+<h3>Gráfico</h3>
+<canvas id="grafico"></canvas>
+</div>
+
+<div class="card">
+<h3>Extrato</h3>
+<div id="extrato"></div>
 </div>
 
 </div>
 
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getFirestore, collection, addDoc, onSnapshot, query, where, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+<script>
 
-const app = initializeApp({
- apiKey:"AIzaSyAh0Qi4lm-ZXQLe4YAca8wYbp5kcU6lY3I",
- authDomain:"fluxozap-10ead.firebaseapp.com",
- projectId:"fluxozap-10ead"
+let dados = JSON.parse(localStorage.getItem("dados")) || [];
+
+function salvar(){
+  localStorage.setItem("dados", JSON.stringify(dados));
+}
+
+function atualizar(){
+
+let total=0, mes=0, dia=0;
+let hoje = new Date().toISOString().slice(0,10);
+let mesAtual = hoje.slice(0,7);
+
+dados.forEach(d=>{
+  if(d.tipo=="entrada"){
+    total += d.valor;
+    if(d.data.startsWith(mesAtual)) mes += d.valor;
+    if(d.data==hoje) dia += d.valor;
+  } else {
+    total -= d.valor;
+    if(d.data.startsWith(mesAtual)) mes -= d.valor;
+    if(d.data==hoje) dia -= d.valor;
+  }
 });
 
-const db=getFirestore(app);
-const auth=getAuth(app);
+document.getElementById("saldoTotal").innerText = total;
+document.getElementById("saldoMes").innerText = mes;
+document.getElementById("saldoDia").innerText = dia;
 
-let empresaId="",userId="";
-let chart;
-
-onAuthStateChanged(auth, async user=>{
- if(!user) return location.href="index.html";
-
- userId=user.uid;
-
- let docUser=await getDoc(doc(db,"usuarios",user.uid));
- let data=docUser.data()||{};
-
- empresaId=data.empresaId||user.uid;
- nomeUsuario.innerText=data.nome||"Usuário";
-
- if(data.foto) fotoPerfil.src=data.foto;
-
- carregar();
+let extratoHTML="";
+dados.slice().reverse().forEach(d=>{
+  extratoHTML += `<p>${d.tipo} R$${d.valor} - ${d.data}</p>`;
 });
+document.getElementById("extrato").innerHTML = extratoHTML;
+
+grafico(total, mes);
+}
+
+function addEntrada(){
+let v = Number(document.getElementById("entrada").value);
+dados.push({tipo:"entrada", valor:v, data:new Date().toISOString().slice(0,10)});
+salvar();
+atualizar();
+}
+
+function addSaida(){
+let v = Number(document.getElementById("saida").value);
+dados.push({tipo:"saida", valor:v, data:new Date().toISOString().slice(0,10)});
+salvar();
+atualizar();
+}
+
+function grafico(total, mes){
+new Chart(document.getElementById("grafico"), {
+type:"doughnut",
+data:{
+labels:["Total","Mês"],
+datasets:[{
+data:[total, mes],
+backgroundColor:["#00c853","#ff1744"]
+}]
+}
+});
+}
+
+function filtrar(){
+let i = document.getElementById("inicio").value;
+let f = document.getElementById("fim").value;
+
+let filtrado = dados.filter(d=> d.data>=i && d.data<=f);
+
+let html="";
+filtrado.forEach(d=>{
+html += `<p>${d.tipo} R$${d.valor} - ${d.data}</p>`;
+});
+
+document.getElementById("extrato").innerHTML = html;
+}
+
+function pdf(){
+const { jsPDF } = window.jspdf;
+let doc = new jsPDF();
+
+let y=10;
+
+dados.forEach(d=>{
+doc.text(`${d.tipo} R$${d.valor} - ${d.data}`,10,y);
+y+=10;
+});
+
+doc.save("extrato.pdf");
+}
+
+function trocarFoto(e){
+let file = e.target.files[0];
+let reader = new FileReader();
+
+reader.onload = function(){
+localStorage.setItem("foto", reader.result);
+document.getElementById("foto").src = reader.result;
+}
+
+reader.readAsDataURL(file);
+}
 
 function carregar(){
- let q = query(collection(db,"movimentos"),where("empresaId","==",empresaId));
-
- onSnapshot(q,(snap)=>{
-  let saldo=0,entrada=0,saida=0;
-
-  lista.innerHTML="";
-
-  snap.forEach(doc=>{
-   let d=doc.data();
-   let v=Number(d.valor)||0;
-
-   if(d.tipo==="entrada"){saldo+=v; entrada+=v;}
-   else{saldo-=v; saida+=v;}
-
-   lista.innerHTML+=`<div>${d.tipo} - R$ ${v}</div>`;
-  });
-
-  saldoTotal.innerText=saldo.toFixed(2);
-
-  if(chart) chart.destroy();
-
-  chart=new Chart(grafico,{
-   type:"doughnut",
-   data:{
-    labels:["Entrada","Saída"],
-    datasets:[{
-     data:[entrada,saida]
-    }]
-   }
-  });
- });
+document.getElementById("nome").innerText = localStorage.getItem("nome") || "Usuário";
+document.getElementById("foto").src = localStorage.getItem("foto") || "";
 }
 
-window.addEntrada=async()=>{
- await addDoc(collection(db,"movimentos"),{
-  tipo:"entrada",
-  valor:Number(entradaValor.value),
-  empresaId,
-  userId,
-  data:new Date().toISOString()
- });
-}
+carregar();
+atualizar();
 
-window.addSaida=async()=>{
- await addDoc(collection(db,"movimentos"),{
-  tipo:"saida",
-  valor:Number(saidaValor.value),
-  categoria:categoria.value,
-  empresaId,
-  userId,
-  data:new Date().toISOString()
- });
-}
-
-fotoInput.onchange=async()=>{
- let file=fotoInput.files[0];
- const reader=new FileReader();
-
- reader.onload=async e=>{
-  let base64=e.target.result;
-
-  await setDoc(doc(db,"usuarios",auth.currentUser.uid),{
-   foto:base64
-  },{merge:true});
-
-  fotoPerfil.src=base64;
- }
-
- reader.readAsDataURL(file);
-}
-</script>
-
-<!-- 🔥 SERVICE WORKER -->
-<script>
-if ('serviceWorker' in navigator) {
- window.addEventListener('load', () => {
-  navigator.serviceWorker.register('sw.js');
- });
-}
 </script>
 
 </body>
