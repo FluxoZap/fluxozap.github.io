@@ -1,129 +1,80 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>FluxoZap</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#6a00ff">
-<link rel="icon" href="https://cdn-icons-png.flaticon.com/512/2331/2331941.png">
+  <!-- SEO (APARECER NO GOOGLE) -->
+  <title>FluxoZap - Controle Financeiro</title>
+  <meta name="description" content="Controle financeiro completo estilo banco digital. Gerencie entradas, saídas, metas mensais e relatórios.">
+  <meta name="keywords" content="controle financeiro, fluxo de caixa, app financeiro, gastos, dinheiro">
+  <meta name="author" content="FluxoZap">
 
-<style>
-body{
- background:#0f0f14;
- color:white;
- font-family:Arial;
- display:flex;
- justify-content:center;
- align-items:center;
- height:100vh;
-}
+  <!-- PWA -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#6a00ff">
 
-.box{
- background:#1c1c25;
- padding:30px;
- border-radius:15px;
- width:320px;
-}
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: linear-gradient(135deg, #0f0f0f, #1a1a1a);
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+    }
 
-input,select{
- width:100%;
- padding:10px;
- margin-top:10px;
- background:#2a2a35;
- border:none;
- border-radius:8px;
- color:white;
-}
+    .container {
+      text-align: center;
+    }
 
-button{
- width:100%;
- padding:10px;
- margin-top:10px;
- border:none;
- border-radius:8px;
- background:#6a00ff;
- color:white;
-}
-</style>
+    h1 {
+      font-size: 40px;
+      margin-bottom: 10px;
+    }
+
+    p {
+      opacity: 0.7;
+      margin-bottom: 30px;
+    }
+
+    button {
+      background: #6a00ff;
+      border: none;
+      padding: 15px 30px;
+      color: white;
+      font-size: 16px;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+
+    button:hover {
+      background: #7c1aff;
+    }
+  </style>
 </head>
 
 <body>
 
-<div class="box">
-<h2>FluxoZap 💳</h2>
+<div class="container">
+  <h1>FluxoZap</h1>
+  <p>Controle financeiro estilo banco digital</p>
 
-<input id="nome" placeholder="Nome">
-<input id="email" placeholder="Email">
-<input id="senha" type="password" placeholder="Senha">
-
-<select id="tipo">
-<option value="pessoal">Conta pessoal</option>
-<option value="profissional">Conta profissional</option>
-</select>
-
-<select id="nivel">
-<option value="admin">Patrão</option>
-<option value="funcionario">Funcionário</option>
-</select>
-
-<button onclick="cadastrar()">Criar conta</button>
-<button onclick="login()">Entrar</button>
+  <button onclick="entrar()">Entrar</button>
 </div>
 
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-
-const app = initializeApp({
- apiKey:"AIzaSyAh0Qi4lm-ZXQLe4YAca8wYbp5kcU6lY3I",
- authDomain:"fluxozap-10ead.firebaseapp.com",
- projectId:"fluxozap-10ead"
-});
-
-const auth=getAuth(app);
-const db=getFirestore(app);
-
-window.cadastrar = async()=>{
- let user = await createUserWithEmailAndPassword(auth,email.value,senha.value);
-
- let empresaId;
-
- if(tipo.value==="profissional"){
-  if(nivel.value==="admin"){
-    empresaId = user.user.uid;
-  }else{
-    empresaId = prompt("Digite o ID do patrão");
-  }
- }else{
-  empresaId = user.user.uid;
- }
-
- await setDoc(doc(db,"usuarios",user.user.uid),{
-  nome:nome.value,
-  tipo:tipo.value,
-  nivel:nivel.value,
-  empresaId
- });
-
- alert("Conta criada!");
-}
-
-window.login=async()=>{
- await signInWithEmailAndPassword(auth,email.value,senha.value);
- location.href="dashboard.html";
-}
-</script>
-
-<!-- 🔥 SERVICE WORKER -->
 <script>
-if ('serviceWorker' in navigator) {
- window.addEventListener('load', () => {
-  navigator.serviceWorker.register('sw.js');
- });
-}
+  function entrar() {
+    window.location.href = "dashboard.html";
+  }
+
+  // SERVICE WORKER (APP)
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js');
+  }
 </script>
 
 </body>
