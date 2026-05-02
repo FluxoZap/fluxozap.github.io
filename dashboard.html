@@ -15,6 +15,7 @@ body{margin:0;font-family:Arial;background:#0b0b0b;color:white;display:flex;}
 .menu h2{color:#7c4dff;}
 .menu a{display:block;color:#aaa;margin:15px 0;text-decoration:none;cursor:pointer;}
 .main{flex:1;padding:20px;}
+
 .top{display:flex;justify-content:space-between;align-items:center;}
 .profile{display:flex;align-items:center;gap:10px;}
 .profile img{width:50px;height:50px;border-radius:50%;object-fit:cover;}
@@ -33,16 +34,11 @@ border:none;
 }
 
 button{cursor:pointer;}
-
 .btn-green{background:#00c853;color:white;}
 .btn-red{background:#ff1744;color:white;}
 
-.extrato p{
-border-bottom:1px solid #222;
-padding:5px 0;
-}
+.extrato p{border-bottom:1px solid #222;padding:5px 0;}
 
-/* MODAL PIX */
 .modal{
 position:fixed;
 top:0;
@@ -61,7 +57,6 @@ padding:30px;
 border-radius:15px;
 text-align:center;
 }
-
 </style>
 </head>
 
@@ -118,7 +113,6 @@ text-align:center;
 <option>Outros</option>
 </select>
 <button class="btn-red" onclick="addSaida()">Adicionar</button>
-
 </div>
 
 <div class="card">
@@ -146,7 +140,7 @@ text-align:center;
 
 </div>
 
-<!-- MODAL PIX -->
+<!-- MODAL PAGAMENTO -->
 <div class="modal" id="modalPix">
 <div class="modal-content">
 
@@ -164,13 +158,9 @@ text-align:center;
 <h3>Pagamento via Pix</h3>
 
 <img id="qr" width="200">
+<p id="valorPix"></p>
 
-<p>Chave Pix:</p>
-<b>silvaereisrepresentacao@gmail.com</b>
-
-<br><br>
-
-<button onclick="jaPaguei()">Já paguei</button>
+<p>Aguardando pagamento...</p>
 </div>
 
 <br>
@@ -183,7 +173,6 @@ text-align:center;
 
 let dados = JSON.parse(localStorage.getItem("dados")) || [];
 let plano = localStorage.getItem("plano") || "gratis";
-let planoSelecionado = "";
 
 function salvar(){
 localStorage.setItem("dados", JSON.stringify(dados));
@@ -323,26 +312,29 @@ document.getElementById("modalPix").style.display="none";
 document.getElementById("areaPix").style.display="none";
 }
 
-function pagar(p){
-planoSelecionado = p;
+async function pagar(planoEscolhido){
+
 document.getElementById("areaPix").style.display="block";
 
-document.getElementById("qr").src =
-"https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=PIX-FLUXOZAP";
-}
+let res = await fetch("http://localhost:3000/criar-pix", {
+method:"POST",
+headers:{"Content-Type":"application/json"},
+body:JSON.stringify({plano:planoEscolhido})
+});
 
-function jaPaguei(){
-if(!planoSelecionado){
-alert("Erro");
-return;
-}
+let data = await res.json();
 
-plano = planoSelecionado;
+document.getElementById("qr").src = data.qrCode;
+document.getElementById("valorPix").innerText = "Valor: R$ " + data.valor;
+
+/* SIMULA CONFIRMAÇÃO AUTOMÁTICA */
+setTimeout(()=>{
+alert("Pagamento confirmado!");
+plano = planoEscolhido;
 localStorage.setItem("plano", plano);
-
-alert("Plano ativado!");
-
 fechar();
+}, 5000);
+
 }
 
 /* INICIO */
