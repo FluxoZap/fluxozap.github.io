@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Planos - FluxoZap</title>
+
+<style>
+body{
+  background:#0d0f14;
+  color:#fff;
+  font-family:Arial;
+  text-align:center;
+}
+
+h1{margin:30px;}
+
+.container{
+  display:flex;
+  justify-content:center;
+  gap:20px;
+  flex-wrap:wrap;
+}
+
+.card{
+  background:#151922;
+  padding:20px;
+  border-radius:15px;
+  width:250px;
+}
+
+.preco{
+  font-size:28px;
+  margin:10px 0;
+}
+
+button{
+  background:#00c853;
+  border:none;
+  padding:10px;
+  width:100%;
+  border-radius:10px;
+  cursor:pointer;
+  margin-top:10px;
+}
+
+.pix-box{
+  margin-top:30px;
+  display:none;
+}
+</style>
+</head>
+
+<body>
+
+<h1>💰 Planos FluxoZap</h1>
+
+<div class="container">
+
+<div class="card">
+<h2>PRO</h2>
+<div class="preco">R$ 19,90</div>
+<button onclick="mostrarPix('pro')">Pagar com Pix</button>
+</div>
+
+<div class="card">
+<h2>EMPRESA</h2>
+<div class="preco">R$ 49,90</div>
+<button onclick="mostrarPix('empresa')">Pagar com Pix</button>
+</div>
+
+</div>
+
+<div class="pix-box" id="pixBox">
+
+<h2>Pagamento via Pix</h2>
+
+<img id="qr" width="200">
+
+<p>Chave Pix:</p>
+<b>SEU-EMAIL-OU-CHAVE-AQUI</b>
+
+<br><br>
+
+<button onclick="jaPaguei()">Já paguei</button>
+
+</div>
+
+<script>
+
+let planoSelecionado = "";
+
+function mostrarPix(plano){
+
+  planoSelecionado = plano;
+
+  document.getElementById("pixBox").style.display = "block";
+
+  // QR fake (você pode trocar depois)
+  document.getElementById("qr").src =
+  "https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=PIX-FLUXOZAP";
+}
+
+function jaPaguei(){
+
+  if(!planoSelecionado){
+    alert("Erro");
+    return;
+  }
+
+  localStorage.setItem("plano", planoSelecionado);
+
+  alert("Plano ativado! (simulação de pagamento)");
+
+  window.location.href = "dashboard.html";
+}
+
+</script>
+
+</body>
+</html>
