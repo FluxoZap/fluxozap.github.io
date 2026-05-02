@@ -168,14 +168,65 @@ text-align:center;
 </div>
 </div>
 
-<script>
+<script type="module">
 
-let dados = JSON.parse(localStorage.getItem("dados")) || [];
-let plano = localStorage.getItem("plano") || "gratis";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-function salvar(){
-localStorage.setItem("dados", JSON.stringify(dados));
+const firebaseConfig = {
+  apiKey: "AIzaSyAh0Qi4lm-ZXQLe4YAca8wYbp5kcU6lY3I",
+  authDomain: "fluxozap-10ead.firebaseapp.com",
+  projectId: "fluxozap-10ead",
+  storageBucket: "fluxozap-10ead.firebasestorage.app",
+  messagingSenderId: "743375450552",
+  appId: "1:743375450552:web:48b85313fbc7fc30b29f4d"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+let dados = [];
+let plano = "gratis";
+let usuarioId = null;
+
+// LOGIN
+onAuthStateChanged(auth, async (user)=>{
+if(!user){
+window.location.href="index.html";
+}else{
+usuarioId = user.uid;
+document.getElementById("nome").innerText = user.email;
+document.getElementById("foto").src = localStorage.getItem("foto") || "";
+await carregarFirebase();
 }
+});
+
+async function carregarFirebase(){
+const ref = doc(db,"usuarios",usuarioId);
+const snap = await getDoc(ref);
+
+if(snap.exists()){
+dados = snap.data().dados || [];
+plano = snap.data().plano || "gratis";
+}else{
+dados = JSON.parse(localStorage.getItem("dados")) || [];
+}
+
+atualizar();
+}
+
+async function salvar(){
+localStorage.setItem("dados", JSON.stringify(dados));
+
+await setDoc(doc(db,"usuarios",usuarioId),{
+dados:dados,
+plano:plano
+});
+}
+
+// RESTO DO SISTEMA (IGUAL AO SEU)
 
 function verificarPlano(){
 if(plano === "gratis" && dados.length >= 20){
@@ -322,7 +373,6 @@ let data = await res.json();
 
 document.getElementById("qr").src = data.qrCode;
 
-// 🔥 VERIFICAÇÃO AUTOMÁTICA
 verificarPagamento(data.txid, planoEscolhido);
 }
 
@@ -339,25 +389,16 @@ clearInterval(interval);
 
 document.getElementById("statusPix").innerText = "Pagamento confirmado!";
 
-localStorage.setItem("plano", planoEscolhido);
+plano = planoEscolhido;
+await salvar();
 
-setTimeout(()=>{
-fechar();
-},2000);
+setTimeout(()=>{ fechar(); },2000);
 
 }
 
 },3000);
 
 }
-
-function carregar(){
-document.getElementById("nome").innerText = localStorage.getItem("nome") || "Usuário";
-document.getElementById("foto").src = localStorage.getItem("foto") || "";
-}
-
-carregar();
-atualizar();
 
 </script>
 
