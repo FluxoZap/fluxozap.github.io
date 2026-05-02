@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>FluxoZap</title>
+<title>FluxoZap - Empresa</title>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -13,21 +13,50 @@
 body{margin:0;font-family:Arial;background:#0b0b0b;color:white;display:flex;}
 .menu{width:230px;background:#0f0f0f;padding:20px;height:100vh;}
 .menu h2{color:#7c4dff;}
-.menu a{display:block;color:#aaa;margin:15px 0;cursor:pointer;}
+.menu a{display:block;color:#aaa;margin:15px 0;text-decoration:none;cursor:pointer;}
 .main{flex:1;padding:20px;}
 
-.top{display:flex;justify-content:space-between;}
-.profile img{width:50px;height:50px;border-radius:50%;}
+.top{display:flex;justify-content:space-between;align-items:center;}
+.profile{display:flex;align-items:center;gap:10px;}
+.profile img{width:50px;height:50px;border-radius:50%;object-fit:cover;}
 
 .cards{display:grid;grid-template-columns:repeat(4,1fr);gap:15px;margin-top:20px;}
 .card{background:#111;padding:20px;border-radius:15px;}
 
 .grid{display:grid;grid-template-columns:2fr 1fr;gap:15px;margin-top:20px;}
 
-button,input,select{width:100%;padding:10px;margin-top:10px;border:none;border-radius:10px;}
+input,select,button{
+width:100%;
+padding:10px;
+margin-top:10px;
+border-radius:10px;
+border:none;
+}
 
-.modal{position:fixed;width:100%;height:100%;background:#000c;display:none;align-items:center;justify-content:center;}
-.modal-content{background:#111;padding:20px;border-radius:15px;text-align:center;}
+button{cursor:pointer;}
+.btn-green{background:#00c853;color:white;}
+.btn-red{background:#ff1744;color:white;}
+
+.extrato p{border-bottom:1px solid #222;padding:5px 0;}
+
+.modal{
+position:fixed;
+top:0;
+left:0;
+width:100%;
+height:100%;
+background:rgba(0,0,0,0.8);
+display:none;
+align-items:center;
+justify-content:center;
+}
+
+.modal-content{
+background:#111;
+padding:30px;
+border-radius:15px;
+text-align:center;
+}
 </style>
 </head>
 
@@ -35,13 +64,18 @@ button,input,select{width:100%;padding:10px;margin-top:10px;border:none;border-r
 
 <div class="menu">
 <h2>FluxoZap</h2>
+<a>Dashboard</a>
 <a onclick="abrirPlanos()">💳 Assinar</a>
 </div>
 
 <div class="main">
 
 <div class="top">
-<h2 id="nome"></h2>
+<div>
+<h2>Dashboard</h2>
+<p id="nome"></p>
+</div>
+
 <div class="profile">
 <img id="foto">
 <input type="file" onchange="trocarFoto(event)">
@@ -49,18 +83,21 @@ button,input,select{width:100%;padding:10px;margin-top:10px;border:none;border-r
 </div>
 
 <div class="cards">
-<div class="card">Saldo Total <b id="total">0</b></div>
-<div class="card">Entradas <b id="entradaMes">0</b></div>
-<div class="card">Saídas <b id="saidaMes">0</b></div>
-<div class="card">Hoje <b id="dia">0</b></div>
+<div class="card">Saldo Total<br><b id="total">0</b></div>
+<div class="card">Entradas Mês<br><b id="entradaMes">0</b></div>
+<div class="card">Saídas Mês<br><b id="saidaMes">0</b></div>
+<div class="card">Saldo Hoje<br><b id="dia">0</b></div>
 </div>
 
 <div class="grid">
-<div class="card">
-<input id="entrada" placeholder="Entrada">
-<button onclick="addEntrada()">Adicionar</button>
 
-<input id="saida" placeholder="Saída">
+<div class="card">
+<h3>Movimentar</h3>
+
+<input id="entrada" type="number" placeholder="Entrada">
+<button class="btn-green" onclick="addEntrada()">Adicionar</button>
+
+<input id="saida" type="number" placeholder="Saída">
 <select id="cat">
 <option>Alimentação</option>
 <option>Gasolina</option>
@@ -69,112 +106,145 @@ button,input,select{width:100%;padding:10px;margin-top:10px;border:none;border-r
 <option>Aluguel</option>
 <option>Funcionário</option>
 <option>Internet</option>
+<option>Cartão</option>
+<option>Transporte</option>
+<option>Saúde</option>
+<option>Educação</option>
 <option>Outros</option>
 </select>
-<button onclick="addSaida()">Adicionar</button>
+<button class="btn-red" onclick="addSaida()">Adicionar</button>
+
 </div>
 
 <div class="card">
-<button onclick="pdf()">Gerar PDF</button>
-</div>
+<h3>Filtro</h3>
+<input type="date" id="i">
+<input type="date" id="f">
+<button onclick="filtrar()">Filtrar</button>
+<button onclick="pdf()">Exportar PDF</button>
 </div>
 
+</div>
+
+<div class="grid">
+
+<div class="card">
 <canvas id="grafico"></canvas>
+</div>
+
+<div class="card extrato">
+<h3>Extrato</h3>
+<div id="lista"></div>
+</div>
 
 </div>
 
-<div class="modal" id="modal">
+</div>
+
+<!-- MODAL PIX -->
+<div class="modal" id="modalPix">
 <div class="modal-content">
+
+<h2>💳 Assinar Plano</h2>
+
+<p>PRO - R$19,90</p>
+<button onclick="pagar('pro')">Pagar PRO</button>
+
+<p>EMPRESA - R$49,90</p>
+<button onclick="pagar('empresa')">Pagar EMPRESA</button>
+
+<br><br>
+
+<div id="areaPix" style="display:none;">
+<h3>Pagamento via Pix</h3>
+
 <img id="qr" width="200">
 <p id="statusPix">Aguardando pagamento...</p>
 </div>
+
+<br>
+<button onclick="fechar()">Fechar</button>
+
+</div>
 </div>
 
-<script type="module">
+<script>
 
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+let dados = JSON.parse(localStorage.getItem("dados")) || [];
+let plano = localStorage.getItem("plano") || "gratis";
 
-// 🔥 SUA CONFIG REAL (JÁ COLOCADA)
-const firebaseConfig = {
-  apiKey: "AIzaSyAh0Qi4lm-ZXQLe4YAca8wYbp5kcU6lY3I",
-  authDomain: "fluxozap-10ead.firebaseapp.com",
-  projectId: "fluxozap-10ead",
-  storageBucket: "fluxozap-10ead.firebasestorage.app",
-  messagingSenderId: "743375450552",
-  appId: "1:743375450552:web:48b85313fbc7fc30b29f4d"
-};
-
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
-
-let dados = [];
-let plano = "gratis";
-let usuarioId = null;
-let chart;
-
-// 🔐 LOGIN
-onAuthStateChanged(auth, async (user)=>{
-if(!user){
-window.location.href="index.html";
-}else{
-usuarioId = user.uid;
-document.getElementById("nome").innerText = user.email;
-document.getElementById("foto").src = localStorage.getItem("foto") || "";
-await carregar();
-}
-});
-
-// 🔥 CARREGAR
-async function carregar(){
-const ref = doc(db,"usuarios",usuarioId);
-const snap = await getDoc(ref);
-
-if(snap.exists()){
-dados = snap.data().dados || [];
-plano = snap.data().plano || "gratis";
+function salvar(){
+localStorage.setItem("dados", JSON.stringify(dados));
 }
 
-atualizar();
+function verificarPlano(){
+if(plano === "gratis" && dados.length >= 20){
+alert("Limite do plano grátis atingido.");
+return false;
+}
+return true;
 }
 
-// 🔥 SALVAR
-async function salvar(){
-await setDoc(doc(db,"usuarios",usuarioId),{
-dados:dados,
-plano:plano
-});
-}
-
-// 🔥 ATUALIZAR
 function atualizar(){
 
-let total=0,e=0,s=0,dia=0;
+let total=0, entradaMes=0, saidaMes=0, dia=0;
 let hoje=new Date().toISOString().slice(0,10);
+let mes=hoje.slice(0,7);
 
 dados.forEach(d=>{
-if(d.tipo=="entrada"){
+if(d.tipo==="entrada"){
 total+=d.valor;
-e+=d.valor;
+if(d.data.startsWith(mes)) entradaMes+=d.valor;
 if(d.data===hoje) dia+=d.valor;
 }else{
 total-=d.valor;
-s+=d.valor;
+if(d.data.startsWith(mes)) saidaMes+=d.valor;
 if(d.data===hoje) dia-=d.valor;
 }
 });
 
-document.getElementById("total").innerText=total.toFixed(2);
-document.getElementById("entradaMes").innerText=e.toFixed(2);
-document.getElementById("saidaMes").innerText=s.toFixed(2);
-document.getElementById("dia").innerText=dia.toFixed(2);
+document.getElementById("total").innerText = total.toFixed(2);
+document.getElementById("entradaMes").innerText = entradaMes.toFixed(2);
+document.getElementById("saidaMes").innerText = saidaMes.toFixed(2);
+document.getElementById("dia").innerText = dia.toFixed(2);
 
-// evita bug gráfico duplicado
-if(chart) chart.destroy();
+let html="";
+dados.slice().reverse().forEach(d=>{
+html+=`<p>${d.tipo} R$${d.valor} - ${d.data}</p>`;
+});
+document.getElementById("lista").innerHTML = html;
 
-chart = new Chart(document.getElementById("grafico"),{
+renderGrafico(entradaMes, saidaMes);
+}
+
+function addEntrada(){
+if(!verificarPlano()) return;
+
+let v = Number(document.getElementById("entrada").value);
+if(!v) return;
+
+dados.push({tipo:"entrada", valor:v, data:new Date().toISOString().slice(0,10)});
+salvar();
+atualizar();
+}
+
+function addSaida(){
+if(!verificarPlano()) return;
+
+let v = Number(document.getElementById("saida").value);
+if(!v) return;
+
+let c = document.getElementById("cat").value;
+
+dados.push({tipo:"saida", valor:v, categoria:c, data:new Date().toISOString().slice(0,10)});
+salvar();
+atualizar();
+}
+
+function renderGrafico(e,s){
+if(window.chart) window.chart.destroy();
+
+window.chart = new Chart(document.getElementById("grafico"),{
 type:"doughnut",
 data:{
 labels:["Entradas","Saídas"],
@@ -186,99 +256,108 @@ backgroundColor:["#00c853","#ff1744"]
 });
 }
 
-// 🔥 ENTRADA
-window.addEntrada=()=>{
-let v=Number(entrada.value);
-if(!v) return;
+function filtrar(){
+let i = document.getElementById("i").value;
+let f = document.getElementById("f").value;
 
-dados.push({
-tipo:"entrada",
-valor:v,
-data:new Date().toISOString().slice(0,10)
+let filtrado = dados.filter(d => (!i || d.data >= i) && (!f || d.data <= f));
+
+let html="";
+filtrado.forEach(d=>{
+html+=`<p>${d.tipo} R$${d.valor} - ${d.data}</p>`;
 });
 
-salvar();
-atualizar();
+document.getElementById("lista").innerHTML = html;
 }
 
-// 🔥 SAÍDA
-window.addSaida=()=>{
-let v=Number(saida.value);
-if(!v) return;
-
-dados.push({
-tipo:"saida",
-valor:v,
-categoria:cat.value,
-data:new Date().toISOString().slice(0,10)
-});
-
-salvar();
-atualizar();
+function pdf(){
+if(plano === "gratis"){
+alert("PDF apenas no plano PRO.");
+return;
 }
 
-// PDF
-window.pdf=()=>{
 const { jsPDF } = window.jspdf;
-let docu=new jsPDF();
+let doc = new jsPDF();
 let y=10;
 
 dados.forEach(d=>{
-docu.text(`${d.tipo} R$${d.valor}`,10,y);
+doc.text(`${d.tipo} R$${d.valor}`,10,y);
 y+=10;
 });
 
-docu.save("extrato.pdf");
+doc.save("extrato.pdf");
 }
 
-// FOTO
-window.trocarFoto=(e)=>{
-let r=new FileReader();
-r.onload=()=>{
-localStorage.setItem("foto",r.result);
-document.getElementById("foto").src=r.result;
-};
-r.readAsDataURL(e.target.files[0]);
+function trocarFoto(e){
+let file = e.target.files[0];
+let reader = new FileReader();
+
+reader.onload = function(){
+localStorage.setItem("foto", reader.result);
+document.getElementById("foto").src = reader.result;
+}
+reader.readAsDataURL(file);
 }
 
-// PIX
-window.abrirPlanos=async()=>{
-document.getElementById("modal").style.display="flex";
+function abrirPlanos(){
+document.getElementById("modalPix").style.display="flex";
+}
 
-let res = await fetch("http://localhost:3000/criar-pix",{
+function fechar(){
+document.getElementById("modalPix").style.display="none";
+document.getElementById("areaPix").style.display="none";
+}
+
+async function pagar(planoEscolhido){
+
+document.getElementById("areaPix").style.display="block";
+
+let res = await fetch("http://localhost:3000/criar-pix", {
 method:"POST",
 headers:{"Content-Type":"application/json"},
-body:JSON.stringify({plano:"pro"})
+body:JSON.stringify({plano:planoEscolhido})
 });
 
 let data = await res.json();
-document.getElementById("qr").src=data.qrCode;
 
-verificar(data.txid);
+document.getElementById("qr").src = data.qrCode;
+
+// 🔥 VERIFICAÇÃO AUTOMÁTICA
+verificarPagamento(data.txid, planoEscolhido);
 }
 
-// VERIFICA PIX
-async function verificar(txid){
-let i=setInterval(async()=>{
+async function verificarPagamento(txid, planoEscolhido){
 
-let r=await fetch("http://localhost:3000/status/"+txid);
-let d=await r.json();
+let interval = setInterval(async ()=>{
 
-if(d.status=="CONCLUIDA"){
-clearInterval(i);
+let res = await fetch("http://localhost:3000/status/" + txid);
+let data = await res.json();
 
-document.getElementById("statusPix").innerText="Pagamento confirmado!";
-plano="pro";
+if(data.status === "CONCLUIDA"){
 
-await salvar();
+clearInterval(interval);
+
+document.getElementById("statusPix").innerText = "Pagamento confirmado!";
+
+localStorage.setItem("plano", planoEscolhido);
 
 setTimeout(()=>{
-document.getElementById("modal").style.display="none";
+fechar();
 },2000);
+
 }
 
 },3000);
+
 }
+
+function carregar(){
+document.getElementById("nome").innerText = localStorage.getItem("nome") || "Usuário";
+document.getElementById("foto").src = localStorage.getItem("foto") || "";
+}
+
+carregar();
+atualizar();
 
 </script>
 
