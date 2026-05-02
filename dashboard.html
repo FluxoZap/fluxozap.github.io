@@ -96,11 +96,14 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-// 🔥 CONFIG FIREBASE (COLOCA O SEU)
+// 🔥 SUA CONFIG REAL (JÁ COLOCADA)
 const firebaseConfig = {
-  apiKey: "COLOQUE_AQUI",
-  authDomain: "COLOQUE_AQUI",
-  projectId: "COLOQUE_AQUI"
+  apiKey: "AIzaSyAh0Qi4lm-ZXQLe4YAca8wYbp5kcU6lY3I",
+  authDomain: "fluxozap-10ead.firebaseapp.com",
+  projectId: "fluxozap-10ead",
+  storageBucket: "fluxozap-10ead.firebasestorage.app",
+  messagingSenderId: "743375450552",
+  appId: "1:743375450552:web:48b85313fbc7fc30b29f4d"
 };
 
 const app = initializeApp(firebaseConfig);
@@ -110,21 +113,22 @@ const db = getFirestore(app);
 let dados = [];
 let plano = "gratis";
 let usuarioId = null;
+let chart;
 
-// 🔐 LOGIN OBRIGATÓRIO
+// 🔐 LOGIN
 onAuthStateChanged(auth, async (user)=>{
 if(!user){
 window.location.href="index.html";
 }else{
 usuarioId = user.uid;
 document.getElementById("nome").innerText = user.email;
+document.getElementById("foto").src = localStorage.getItem("foto") || "";
 await carregar();
 }
 });
 
 // 🔥 CARREGAR
 async function carregar(){
-
 const ref = doc(db,"usuarios",usuarioId);
 const snap = await getDoc(ref);
 
@@ -138,49 +142,92 @@ atualizar();
 
 // 🔥 SALVAR
 async function salvar(){
-
 await setDoc(doc(db,"usuarios",usuarioId),{
 dados:dados,
 plano:plano
 });
-
 }
 
-// 🔥 SISTEMA
+// 🔥 ATUALIZAR
 function atualizar(){
 
-let total=0,e=0,s=0;
+let total=0,e=0,s=0,dia=0;
+let hoje=new Date().toISOString().slice(0,10);
 
 dados.forEach(d=>{
-if(d.tipo=="entrada"){total+=d.valor;e+=d.valor;}
-else{total-=d.valor;s+=d.valor;}
+if(d.tipo=="entrada"){
+total+=d.valor;
+e+=d.valor;
+if(d.data===hoje) dia+=d.valor;
+}else{
+total-=d.valor;
+s+=d.valor;
+if(d.data===hoje) dia-=d.valor;
+}
 });
 
-document.getElementById("total").innerText=total;
-document.getElementById("entradaMes").innerText=e;
-document.getElementById("saidaMes").innerText=s;
+document.getElementById("total").innerText=total.toFixed(2);
+document.getElementById("entradaMes").innerText=e.toFixed(2);
+document.getElementById("saidaMes").innerText=s.toFixed(2);
+document.getElementById("dia").innerText=dia.toFixed(2);
 
-new Chart(document.getElementById("grafico"),{
+// evita bug gráfico duplicado
+if(chart) chart.destroy();
+
+chart = new Chart(document.getElementById("grafico"),{
 type:"doughnut",
-data:{labels:["Entradas","Saídas"],datasets:[{data:[e,s]}]}
+data:{
+labels:["Entradas","Saídas"],
+datasets:[{
+data:[e,s],
+backgroundColor:["#00c853","#ff1744"]
+}]
+}
 });
 }
 
+// 🔥 ENTRADA
 window.addEntrada=()=>{
-dados.push({tipo:"entrada",valor:Number(entrada.value)});
-salvar();atualizar();
+let v=Number(entrada.value);
+if(!v) return;
+
+dados.push({
+tipo:"entrada",
+valor:v,
+data:new Date().toISOString().slice(0,10)
+});
+
+salvar();
+atualizar();
 }
 
+// 🔥 SAÍDA
 window.addSaida=()=>{
-dados.push({tipo:"saida",valor:Number(saida.value)});
-salvar();atualizar();
+let v=Number(saida.value);
+if(!v) return;
+
+dados.push({
+tipo:"saida",
+valor:v,
+categoria:cat.value,
+data:new Date().toISOString().slice(0,10)
+});
+
+salvar();
+atualizar();
 }
 
 // PDF
 window.pdf=()=>{
 const { jsPDF } = window.jspdf;
 let docu=new jsPDF();
-docu.text("Extrato",10,10);
+let y=10;
+
+dados.forEach(d=>{
+docu.text(`${d.tipo} R$${d.valor}`,10,y);
+y+=10;
+});
+
 docu.save("extrato.pdf");
 }
 
@@ -194,9 +241,8 @@ document.getElementById("foto").src=r.result;
 r.readAsDataURL(e.target.files[0]);
 }
 
-// PIX REAL
+// PIX
 window.abrirPlanos=async()=>{
-
 document.getElementById("modal").style.display="flex";
 
 let res = await fetch("http://localhost:3000/criar-pix",{
@@ -206,14 +252,13 @@ body:JSON.stringify({plano:"pro"})
 });
 
 let data = await res.json();
-
 document.getElementById("qr").src=data.qrCode;
 
 verificar(data.txid);
 }
 
+// VERIFICA PIX
 async function verificar(txid){
-
 let i=setInterval(async()=>{
 
 let r=await fetch("http://localhost:3000/status/"+txid);
@@ -222,7 +267,7 @@ let d=await r.json();
 if(d.status=="CONCLUIDA"){
 clearInterval(i);
 
-document.getElementById("statusPix").innerText="Pago!";
+document.getElementById("statusPix").innerText="Pagamento confirmado!";
 plano="pro";
 
 await salvar();
@@ -233,7 +278,6 @@ document.getElementById("modal").style.display="none";
 }
 
 },3000);
-
 }
 
 </script>
