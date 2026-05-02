@@ -10,94 +10,22 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
 <style>
-body{
-margin:0;
-font-family:Arial;
-background:#0b0b0b;
-color:white;
-display:flex;
-}
-
-/* MENU */
-.menu{
-width:230px;
-background:#0f0f0f;
-padding:20px;
-height:100vh;
-}
-
-.menu h2{
-color:#7c4dff;
-}
-
-.menu a{
-display:block;
-color:#aaa;
-margin:15px 0;
-text-decoration:none;
-}
-
-/* CONTEUDO */
-.main{
-flex:1;
-padding:20px;
-}
-
-.top{
-display:flex;
-justify-content:space-between;
-align-items:center;
-}
-
-.profile{
-display:flex;
-align-items:center;
-gap:10px;
-}
-
-.profile img{
-width:50px;
-height:50px;
-border-radius:50%;
-}
-
-/* CARDS */
-.cards{
-display:grid;
-grid-template-columns:repeat(4,1fr);
-gap:15px;
-margin-top:20px;
-}
-
-.card{
-background:#111;
-padding:20px;
-border-radius:15px;
-}
-
-/* GRID */
-.grid{
-display:grid;
-grid-template-columns:2fr 1fr;
-gap:15px;
-margin-top:20px;
-}
-
-input,select,button{
-width:100%;
-padding:10px;
-margin-top:10px;
-border-radius:10px;
-border:none;
-}
-
+body{margin:0;font-family:Arial;background:#0b0b0b;color:white;display:flex;}
+.menu{width:230px;background:#0f0f0f;padding:20px;height:100vh;}
+.menu h2{color:#7c4dff;}
+.menu a{display:block;color:#aaa;margin:15px 0;text-decoration:none;}
+.main{flex:1;padding:20px;}
+.top{display:flex;justify-content:space-between;align-items:center;}
+.profile{display:flex;align-items:center;gap:10px;}
+.profile img{width:50px;height:50px;border-radius:50%;object-fit:cover;}
+.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:15px;margin-top:20px;}
+.card{background:#111;padding:20px;border-radius:15px;}
+.grid{display:grid;grid-template-columns:2fr 1fr;gap:15px;margin-top:20px;}
+input,select,button{width:100%;padding:10px;margin-top:10px;border-radius:10px;border:none;}
+button{cursor:pointer;}
 .btn-green{background:#00c853;color:white;}
 .btn-red{background:#ff1744;color:white;}
-
-.extrato p{
-border-bottom:1px solid #222;
-padding:5px 0;
-}
+.extrato p{border-bottom:1px solid #222;padding:5px 0;}
 </style>
 </head>
 
@@ -109,7 +37,7 @@ padding:5px 0;
 <a>Movimentações</a>
 <a>Relatórios</a>
 <a>Funcionários</a>
-<a>Configurações</a>
+<a onclick="mudarPlano()">💳 Planos</a>
 </div>
 
 <div class="main">
@@ -122,11 +50,10 @@ padding:5px 0;
 
 <div class="profile">
 <img id="foto">
-<input type="file" onchange="foto(event)">
+<input type="file" onchange="trocarFoto(event)">
 </div>
 </div>
 
-<!-- CARDS -->
 <div class="cards">
 <div class="card">Saldo Total<br><b id="total">0</b></div>
 <div class="card">Entradas Mês<br><b id="entradaMes">0</b></div>
@@ -134,16 +61,15 @@ padding:5px 0;
 <div class="card">Saldo Hoje<br><b id="dia">0</b></div>
 </div>
 
-<!-- GRID -->
 <div class="grid">
 
 <div class="card">
 <h3>Movimentar</h3>
 
-<input id="entrada" placeholder="Entrada">
+<input id="entrada" type="number" placeholder="Entrada">
 <button class="btn-green" onclick="addEntrada()">Adicionar</button>
 
-<input id="saida" placeholder="Saída">
+<input id="saida" type="number" placeholder="Saída">
 <select id="cat">
 <option>Alimentação</option>
 <option>Gasolina</option>
@@ -152,6 +78,10 @@ padding:5px 0;
 <option>Aluguel</option>
 <option>Funcionário</option>
 <option>Internet</option>
+<option>Cartão</option>
+<option>Transporte</option>
+<option>Saúde</option>
+<option>Educação</option>
 <option>Outros</option>
 </select>
 <button class="btn-red" onclick="addSaida()">Adicionar</button>
@@ -163,7 +93,7 @@ padding:5px 0;
 <input type="date" id="i">
 <input type="date" id="f">
 <button onclick="filtrar()">Filtrar</button>
-<button onclick="pdf()">PDF</button>
+<button onclick="pdf()">Exportar PDF</button>
 </div>
 
 </div>
@@ -185,9 +115,20 @@ padding:5px 0;
 
 <script>
 
-let dados = JSON.parse(localStorage.getItem("dados"))||[];
+let dados = JSON.parse(localStorage.getItem("dados")) || [];
+let plano = localStorage.getItem("plano") || "gratis";
 
-function salvar(){localStorage.setItem("dados",JSON.stringify(dados));}
+function salvar(){
+  localStorage.setItem("dados", JSON.stringify(dados));
+}
+
+function verificarPlano(){
+  if(plano === "gratis" && dados.length >= 20){
+    alert("Limite do plano grátis atingido. Atualize para o PRO.");
+    return false;
+  }
+  return true;
+}
 
 function atualizar(){
 
@@ -196,89 +137,128 @@ let hoje=new Date().toISOString().slice(0,10);
 let mes=hoje.slice(0,7);
 
 dados.forEach(d=>{
-if(d.tipo=="entrada"){
-total+=d.valor;
-if(d.data.startsWith(mes)) entradaMes+=d.valor;
-if(d.data==hoje) dia+=d.valor;
-}else{
-total-=d.valor;
-if(d.data.startsWith(mes)) saidaMes+=d.valor;
-if(d.data==hoje) dia-=d.valor;
-}
+  if(d.tipo==="entrada"){
+    total += d.valor;
+    if(d.data.startsWith(mes)) entradaMes += d.valor;
+    if(d.data===hoje) dia += d.valor;
+  } else {
+    total -= d.valor;
+    if(d.data.startsWith(mes)) saidaMes += d.valor;
+    if(d.data===hoje) dia -= d.valor;
+  }
 });
 
-document.getElementById("total").innerText=total;
-document.getElementById("entradaMes").innerText=entradaMes;
-document.getElementById("saidaMes").innerText=saidaMes;
-document.getElementById("dia").innerText=dia;
+document.getElementById("total").innerText = total.toFixed(2);
+document.getElementById("entradaMes").innerText = entradaMes.toFixed(2);
+document.getElementById("saidaMes").innerText = saidaMes.toFixed(2);
+document.getElementById("dia").innerText = dia.toFixed(2);
 
 let html="";
 dados.slice().reverse().forEach(d=>{
-html+=`<p>${d.tipo} R$${d.valor} - ${d.data}</p>`;
+  html += `<p>${d.tipo} R$${d.valor} - ${d.data}</p>`;
 });
-document.getElementById("lista").innerHTML=html;
+document.getElementById("lista").innerHTML = html;
 
-grafico(entradaMes,saidaMes);
+renderGrafico(entradaMes, saidaMes);
 }
 
 function addEntrada(){
-let v=Number(document.getElementById("entrada").value);
-dados.push({tipo:"entrada",valor:v,data:new Date().toISOString().slice(0,10)});
-salvar();atualizar();
+  if(!verificarPlano()) return;
+
+  let v = Number(document.getElementById("entrada").value);
+  if(!v) return;
+
+  dados.push({tipo:"entrada", valor:v, data:new Date().toISOString().slice(0,10)});
+  salvar();
+  atualizar();
 }
 
 function addSaida(){
-let v=Number(document.getElementById("saida").value);
-dados.push({tipo:"saida",valor:v,data:new Date().toISOString().slice(0,10)});
-salvar();atualizar();
+  if(!verificarPlano()) return;
+
+  let v = Number(document.getElementById("saida").value);
+  if(!v) return;
+
+  let c = document.getElementById("cat").value;
+
+  dados.push({tipo:"saida", valor:v, categoria:c, data:new Date().toISOString().slice(0,10)});
+  salvar();
+  atualizar();
 }
 
-function grafico(e,s){
-new Chart(document.getElementById("grafico"),{
-type:"bar",
-data:{labels:["Entradas","Saídas"],datasets:[{data:[e,s]}]}
-});
+function renderGrafico(e,s){
+  if(window.chart) window.chart.destroy();
+
+  window.chart = new Chart(document.getElementById("grafico"),{
+    type:"doughnut",
+    data:{
+      labels:["Entradas","Saídas"],
+      datasets:[{
+        data:[e,s],
+        backgroundColor:["#00c853","#ff1744"]
+      }]
+    }
+  });
 }
 
 function filtrar(){
-let i=document.getElementById("i").value;
-let f=document.getElementById("f").value;
+  let i = document.getElementById("i").value;
+  let f = document.getElementById("f").value;
 
-let filtrado=dados.filter(d=>d.data>=i && d.data<=f);
+  let filtrado = dados.filter(d => (!i || d.data >= i) && (!f || d.data <= f));
 
-let html="";
-filtrado.forEach(d=>{
-html+=`<p>${d.tipo} R$${d.valor} - ${d.data}</p>`;
-});
-document.getElementById("lista").innerHTML=html;
+  let html="";
+  filtrado.forEach(d=>{
+    html += `<p>${d.tipo} R$${d.valor} - ${d.data}</p>`;
+  });
+
+  document.getElementById("lista").innerHTML = html;
 }
 
 function pdf(){
-const { jsPDF } = window.jspdf;
-let doc=new jsPDF();
-let y=10;
 
-dados.forEach(d=>{
-doc.text(`${d.tipo} R$${d.valor}`,10,y);
-y+=10;
-});
+  if(plano === "gratis"){
+    alert("PDF disponível apenas no plano PRO.");
+    return;
+  }
 
-doc.save("extrato.pdf");
+  const { jsPDF } = window.jspdf;
+  let doc = new jsPDF();
+  let y=10;
+
+  dados.forEach(d=>{
+    doc.text(`${d.tipo} R$${d.valor} - ${d.data}`,10,y);
+    y+=10;
+  });
+
+  doc.save("extrato.pdf");
 }
 
-function foto(e){
-let file=e.target.files[0];
-let r=new FileReader();
-r.onload=()=>{
-localStorage.setItem("foto",r.result);
-document.getElementById("foto").src=r.result;
+function trocarFoto(e){
+  let file = e.target.files[0];
+  let reader = new FileReader();
+
+  reader.onload = function(){
+    localStorage.setItem("foto", reader.result);
+    document.getElementById("foto").src = reader.result;
+  }
+
+  reader.readAsDataURL(file);
 }
-r.readAsDataURL(file);
+
+function mudarPlano(){
+  let escolha = prompt("Digite: gratis / pro / empresa");
+
+  if(escolha){
+    plano = escolha;
+    localStorage.setItem("plano", escolha);
+    alert("Plano atualizado: " + escolha);
+  }
 }
 
 function carregar(){
-document.getElementById("nome").innerText=localStorage.getItem("nome")||"Usuário";
-document.getElementById("foto").src=localStorage.getItem("foto")||"";
+  document.getElementById("nome").innerText = localStorage.getItem("nome") || "Usuário";
+  document.getElementById("foto").src = localStorage.getItem("foto") || "";
 }
 
 carregar();
